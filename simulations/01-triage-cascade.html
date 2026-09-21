@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en" >
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Support Triage Cascade</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%278%27 fill=%27%23d63c9e%27/%3E%3Cpath d=%27M20 8v11a5 5 0 0 1-9 3%27 stroke=%27white%27 stroke-width=%273%27 fill=%27none%27 stroke-linecap=%27round%27/%3E%3C/svg%3E">
+<link rel="stylesheet" href="assets/sim.css">
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="index.html">← all simulations</a>
+  <div class="top"><span class="eyebrow">Cookbook 01</span></div>
+  <h1>Support triage cascade</h1>
+  <p class="lede">Every support message goes to Jev first. Jev decides what kind of message it is,
+  and <b>your code</b> sends it down the cheapest path that can actually handle it. Most messages
+  never reach an expensive AI model at all.</p>
+
+  <div class="panel">
+    <div class="controls">
+      <button id="play" class="primary">▶  Play</button>
+      <button id="step">Step</button>
+      <button id="reset">Reset</button>
+      <div class="spacer"></div>
+      <label class="ctl">Speed <input id="speed" type="range" min="0.5" max="4" step="0.5" value="1"></label>
+    </div>
+    <svg id="stage" viewBox="0 0 960 400" role="img"
+         aria-label="Tickets flow from an inbox through Jev, then split into four handling lanes."></svg>
+    <div class="legend">
+      <span><i style="background:var(--code)"></i>Handled by plain code — no AI</span>
+      <span><i style="background:var(--llm)"></i>Sent to a specialist AI</span>
+      <span><i style="background:var(--human)"></i>Sent to a person</span>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="panel">
+      <h2>What Jev just read <span class="sub">— one call, five judgements</span></h2>
+      <div id="card"></div>
+    </div>
+    <div class="panel">
+      <h2>Running totals <span class="sub">— per 1,000 tickets</span></h2>
+      <div class="stats">
+        <div class="stat" data-stat="done"><div class="k">Handled</div><div class="v">0</div><div class="n">tickets</div></div>
+        <div class="stat" data-stat="nomodel"><div class="k">No AI needed</div><div class="v">0%</div><div class="n">pure code</div></div>
+        <div class="stat" data-stat="cost"><div class="k">Cost</div><div class="v">$0</div><div class="n">this cascade</div></div>
+        <div class="stat" data-stat="naive"><div class="k">Cost if all AI</div><div class="v">$0</div><div class="n">no triage</div></div>
+      </div>
+      <p class="note" id="verdict">Press <b>Play</b> to start the queue.</p>
+      <label class="ctl" style="margin-top:14px">
+        Send to a person below this confidence
+        <input id="floor" type="range" min="0.3" max="0.9" step="0.05" value="0.5">
+        <span class="tick" id="floorv">0.50</span>
+      </label>
+    </div>
+  </div>
+</div>
+
+<script src="assets/d3-mini.js"></script>
+<script type="module">
+import { $, Ticker, wireControls, setStat, rng, around, dur, cssVar } from "./assets/sim.js";
+
+const LANES = [
+  { id: "order_status",     label: "Order lookup",        sub: "your database",        kind: "code",  colour: "--code",  cost: 0.00004, ms: 120 },
+  { id: "product_question", label: "Product specialist",  sub: "a narrow AI prompt",   kind: "llm",   colour: "--llm",   cost: 0.03,    ms: 4200 },
+  { id: "return_exchange",  label: "Returns specialist",  sub: "a narrow AI prompt",   kind: "llm",   colour: "--llm",   cost: 0.03,    ms: 4200 },
+  { id: "human",            label: "A person",            sub: "honest escalation",    kind: "human", colour: "--human", cost: 0.90,    ms: 900000 },
+];
+const TICKETS = [
+  { text: "Where is order A-104? It was supposed to arrive Monday.", intent: "order_status", conf: .96, cx: .2 },
+  { text: "Do the trail runners come in a wide fit? I take a 10 EE.", intent: "product_question", conf: .91, cx: .6 },
+  { text: "These arrived scuffed. I want my money back.", intent: "return_exchange", conf: .93, cx: 1.1 },
+  { text: "Has my refund gone through yet?", intent: "order_status", conf: .88, cx: .4 },
+  { text: "hi", intent: "product_question", conf: .34, cx: .5 },
+  { text: "My daughter tripped on the loose sole. I've spoken to a lawyer.", intent: "human", conf: .97, cx: 2.0, safety: true },
+  { text: "Can I swap these for a size 10?", intent: "return_exchange", conf: .95, cx: .5 },
+  { text: "Tracking says delivered but nothing arrived.", intent: "order_status", conf: .79, cx: 1.3 },
+  { text: "Are the laces replaceable, and do you sell them separately?", intent: "product_question", conf: .86, cx: .7 },
+  { text: "why is this so complicated???", intent: "human", conf: .44, cx: 1.6 },
+];
+
+const svg = d3.select("#stage");
+const r = rng(7);
+let i = 0, done = 0, cost = 0, naive = 0, byLane = {}, floor = 0.5;
+
+// ---- static scaffolding -------------------------------------------------
+const JEV_X = 360, JEV_Y = 200, LANE_X = 700;
+const laneY = (k) => 78 + k * 82;
+
+const defs = svg.append("defs");
+defs.append("marker").attr("id", "ah").attr("viewBox", "0 0 8 8").attr("refX", 7).attr("refY", 4)
+  .attr("markerWidth", 6).attr("markerHeight", 6).attr("orient", "auto")
+  .append("path").attr("d", "M0,0 L8,4 L0,8 Z").attr("fill", "var(--line)");
+
+// inbox
+svg.append("rect").attr("x", 40).attr("y", 150).attr("width", 128).attr("height", 100).attr("rx", 10)
+  .attr("fill", "var(--bg)").attr("stroke", "var(--line)");
+svg.append("text").attr("x", 104).attr("y", 186).attr("text-anchor", "middle")
+  .attr("font-size", 13).attr("font-weight", 600).attr("fill", "var(--ink)").text("Inbox");
+const queueCount = svg.append("text").attr("x", 104).attr("y", 212).attr("text-anchor", "middle")
+  .attr("font-size", 22).attr("font-weight", 650).attr("fill", "var(--muted)")
+  .attr("font-family", "var(--mono)").text(TICKETS.length);
+svg.append("text").attr("x", 104).attr("y", 232).attr("text-anchor", "middle")
+  .attr("font-size", 11).attr("fill", "var(--muted)").text("messages waiting");
+
+// inbox -> jev
+svg.append("path").attr("d", `M168,200 L${JEV_X - 62},200`).attr("stroke", "var(--line)")
+  .attr("stroke-width", 2).attr("fill", "none").attr("marker-end", "url(#ah)");
+
+// jev node
+const jev = svg.append("g");
+jev.append("rect").attr("x", JEV_X - 60).attr("y", JEV_Y - 42).attr("width", 120).attr("height", 84)
+  .attr("rx", 14).attr("fill", "var(--jev)");
+jev.append("text").attr("x", JEV_X).attr("y", JEV_Y - 10).attr("text-anchor", "middle")
+  .attr("font-size", 17).attr("font-weight", 700).attr("fill", "#fff").text("Jev");
+jev.append("text").attr("x", JEV_X).attr("y", JEV_Y + 10).attr("text-anchor", "middle")
+  .attr("font-size", 11).attr("fill", "#fff").attr("opacity", .9).text("reads the message");
+jev.append("text").attr("x", JEV_X).attr("y", JEV_Y + 27).attr("text-anchor", "middle")
+  .attr("font-size", 11).attr("fill", "#fff").attr("opacity", .9).text("~200 milliseconds");
+const pulse = svg.append("rect").attr("x", JEV_X - 60).attr("y", JEV_Y - 42).attr("width", 120)
+  .attr("height", 84).attr("rx", 14).attr("fill", "none").attr("stroke", "var(--jev)")
+  .attr("stroke-width", 3).attr("opacity", 0);
+
+// lanes
+LANES.forEach((L, k) => {
+  const y = laneY(k);
+  svg.append("path")
+    .attr("d", `M${JEV_X + 62},${JEV_Y} C${JEV_X + 160},${JEV_Y} ${LANE_X - 130},${y} ${LANE_X - 12},${y}`)
+    .attr("id", `p-${L.id}`).attr("stroke", "var(--line)").attr("stroke-width", 2)
+    .attr("fill", "none").attr("marker-end", "url(#ah)");
+  const g = svg.append("g");
+  g.append("rect").attr("x", LANE_X).attr("y", y - 27).attr("width", 218).attr("height", 54).attr("rx", 10)
+    .attr("fill", "var(--panel)").attr("stroke", `var(${L.colour})`).attr("stroke-width", 1.5);
+  g.append("text").attr("x", LANE_X + 14).attr("y", y - 6).attr("font-size", 13)
+    .attr("font-weight", 620).attr("fill", "var(--ink)").text(L.label);
+  g.append("text").attr("x", LANE_X + 14).attr("y", y + 12).attr("font-size", 11)
+    .attr("fill", "var(--muted)").text(L.sub);
+  g.append("text").attr("x", LANE_X + 204).attr("y", y + 5).attr("text-anchor", "end")
+    .attr("font-size", 17).attr("font-weight", 650).attr("font-family", "var(--mono)")
+    .attr("fill", `var(${L.colour})`).attr("id", `c-${L.id}`).text("0");
+});
+
+// ---- one ticket ---------------------------------------------------------
+function decide(t) {
+  // Jev's confidence floor is a number in YOUR code, not in a prompt.
+  if (t.safety) return LANES[3];
+  if (t.conf < floor) return LANES[3];
+  return LANES.find((L) => L.id === t.intent) || LANES[3];
+}
+
+function tick() {
+  if (i >= TICKETS.length) { ticker.pause(); paint(); $("#verdict").innerHTML =
+    "<b>Queue empty.</b> Most tickets never touched an AI model — that is the branch that pays for the whole design."; return; }
+  const t = TICKETS[i++];
+  const lane = decide(t);
+
+  queueCount.text(TICKETS.length - i);
+  pulse.attr("opacity", .9).attr("transform", "scale(1)")
+    .transition().duration(dur(520)).attr("opacity", 0);
+
+  renderCard(t, lane);
+
+  // a dot rides the lane path
+  const path = document.getElementById(`p-${lane.id}`);
+  const len = path.getTotalLength();
+  const dot = svg.append("circle").attr("r", 7).attr("fill", `var(${lane.colour})`);
+  dot.transition().duration(dur(760)).ease(d3.easeCubicInOut)
+    .attrTween("transform", () => (u) => {
+      const p = path.getPointAtLength(u * len);
+      return `translate(${p.x},${p.y})`;
+    })
+    .on("end", () => dot.transition().duration(dur(180)).attr("r", 13).attr("opacity", 0).remove());
+
+  byLane[lane.id] = (byLane[lane.id] || 0) + 1;
+  d3.select(`#c-${lane.id}`).text(byLane[lane.id]);
+  done++; cost += lane.cost; naive += 0.03;
+  paint();
+}
+
+function renderCard(t, lane) {
+  const bar = (label, val, colour) => `
+    <div style="margin:9px 0">
+      <div style="display:flex;justify-content:space-between;font-size:12px">
+        <span style="color:var(--muted)">${label}</span>
+        <span class="tick">${val.toFixed(2)}</span>
+      </div>
+      <div class="bar"><span style="width:${val * 100}%;background:var(${colour})"></span></div>
+    </div>`;
+  $("#card").innerHTML = `
+    <p style="margin:0 0 14px;font-size:14px">“${t.text}”</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px">
+      <span class="pill" style="color:var(--jev);border-color:var(--jev)">${t.intent.replace(/_/g, " ")}</span>
+      <span class="pill" style="color:var(${lane.colour});border-color:var(${lane.colour})">→ ${lane.label}</span>
+    </div>
+    ${bar("How sure Jev is about the category", t.conf, "--jev")}
+    ${bar("How hard it looks to resolve", Math.min(t.cx / 2, 1), "--human")}
+    <p class="note">${t.safety
+      ? "A separate yes/no question flagged harm and a legal threat. That check is <b>absolute</b> — it overrides the category."
+      : t.conf < floor
+        ? "Below your confidence floor, so Jev is saying <b>“I don’t know”</b> and your code sends it to a person."
+        : "Confident enough to act on automatically."}</p>`;
+}
+
+function paint() {
+  const codeShare = ((byLane.order_status || 0) / Math.max(done, 1)) * 100;
+  setStat("done", done);
+  setStat("nomodel", codeShare.toFixed(0) + "%");
+  setStat("cost", "$" + (cost / Math.max(done, 1) * 1000).toFixed(0));
+  setStat("naive", "$" + (naive / Math.max(done, 1) * 1000).toFixed(0));
+}
+
+const ticker = new Ticker(tick, 1400);
+wireControls({
+  ticker, playBtn: $("#play"), stepBtn: $("#step"), resetBtn: $("#reset"), speedInput: $("#speed"),
+  onReset() {
+    i = done = cost = naive = 0; byLane = {};
+    queueCount.text(TICKETS.length);
+    LANES.forEach((L) => d3.select(`#c-${L.id}`).text("0"));
+    $("#card").innerHTML = "";
+    $("#verdict").innerHTML = "Press <b>Play</b> to start the queue.";
+    paint();
+  },
+});
+$("#floor").addEventListener("input", (e) => {
+  floor = Number(e.target.value);
+  $("#floorv").textContent = floor.toFixed(2);
+});
+paint();
+</script>
+</body>
+</html>

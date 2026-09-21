@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jev Simulations</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%278%27 fill=%27%23d63c9e%27/%3E%3Cpath d=%27M20 8v11a5 5 0 0 1-9 3%27 stroke=%27white%27 stroke-width=%273%27 fill=%27none%27 stroke-linecap=%27round%27/%3E%3C/svg%3E">
+<link rel="stylesheet" href="assets/sim.css">
+<style>
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); gap: 16px; }
+  .card {
+    display: block; text-decoration: none; color: inherit; background: var(--panel);
+    border: 1px solid var(--line); border-radius: var(--r); padding: 20px;
+    box-shadow: var(--shadow); transition: transform .16s, border-color .16s;
+  }
+  .card:hover { transform: translateY(-2px); border-color: var(--jev); }
+  .card:focus-visible { outline: 2px solid var(--jev); outline-offset: 3px; }
+  .card .num { font-family: var(--mono); font-size: 11px; font-weight: 700; color: var(--jev); letter-spacing: .08em; }
+  .card h3 { margin: 6px 0 8px; font-size: 17px; letter-spacing: -.01em; }
+  .card p { margin: 0; font-size: 13.5px; color: var(--muted); line-height: 1.5; }
+  .card .flow { margin-top: 14px; font-size: 11.5px; font-family: var(--mono); color: var(--muted);
+                padding-top: 12px; border-top: 1px solid var(--line-soft); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top"><span class="eyebrow">jev-playground</span></div>
+  <h1>See it work</h1>
+  <p class="lede">Six small simulations of the same idea: a fast, cheap AI makes the small
+  judgements, your code makes the decisions, and the expensive AI is only called when it is
+  genuinely needed. <b>No AI is actually called</b> — these are animations of the patterns,
+  with made-up but realistic numbers.</p>
+
+  <div class="cards">
+    <a class="card" href="01-triage-cascade.html">
+      <div class="num">01</div><h3>Support triage cascade</h3>
+      <p>A thousand customer messages arrive. Most of them never need an expensive AI model —
+      but something has to work out which ones do.</p>
+      <div class="flow">message → Jev → code · specialist AI · person</div>
+    </a>
+    <a class="card" href="02-rag-gatekeeper.html">
+      <div class="num">02</div><h3>The gatekeeper</h3>
+      <p>Search returned ten documents. One is irrelevant, one is trying to hijack the answer.
+      Screen them before the expensive model reads a word.</p>
+      <div class="flow">documents → Jev → keep · drop · quarantine</div>
+    </a>
+    <a class="card" href="03-agent-guardrails.html">
+      <div class="num">03</div><h3>The checkpoint</h3>
+      <p>An AI agent keeps asking to run commands. Check every one for four separate hazards,
+      in less time than the command itself takes.</p>
+      <div class="flow">tool call → Jev → allow · confirm · block</div>
+    </a>
+    <a class="card" href="04-output-verifier.html">
+      <div class="num">04</div><h3>The second pair of eyes</h3>
+      <p>A chatbot wrote a reply to a customer. Did it invent a number? Promise something?
+      Actually answer? Check before it sends.</p>
+      <div class="flow">draft → Jev → send · rewrite · hold</div>
+    </a>
+    <a class="card" href="05-lead-scoring.html">
+      <div class="num">05</div><h3>Scoring while they wait</h3>
+      <p>Someone submits a form. Rate them on four things and route them before the page
+      finishes loading. Drag the sliders to change what matters.</p>
+      <div class="flow">form → Jev → weighted score → sales tier</div>
+    </a>
+    <a class="card" href="06-model-router.html">
+      <div class="num">06</div><h3>Picking the right brain</h3>
+      <p>You pay for several AI models of different speeds and prices. Send each request to
+      the cheapest one that can actually do the job.</p>
+      <div class="flow">request → Jev → no AI · small · reasoning · person</div>
+    </a>
+  </div>
+
+  <div class="panel" style="margin-top:26px">
+    <h2>The shape they all share</h2>
+    <p class="note" style="margin:0">
+      <b>1.</b> Your code gathers exactly the information the question needs. &nbsp;
+      <b>2.</b> Jev answers every question about it at once, and says how sure it is. &nbsp;
+      <b>3.</b> Your code decides what happens — the thresholds are numbers you can read, test and revert. &nbsp;
+      <b>4.</b> An expensive model is called only for the part that genuinely needs one.</p>
+    <p class="note">Each simulation matches the runnable Python in
+    <code>cookbooks/</code>. The numbers shown are illustrative, not measured.</p>
+  </div>
+</div>
+</body>
+</html>

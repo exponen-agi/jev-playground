@@ -23,6 +23,7 @@ you already built around OpenAI, Claude, or Gemini.
 - [The numbers, and how much weight to put on them](#the-numbers-and-how-much-weight-to-put-on-them)
 - [Where it breaks](#where-it-breaks)
 - [Cookbooks: Jev + your existing LLM](#cookbooks-jev--your-existing-llm)
+- [See it running](#see-it-running)
 - [Setup](#setup)
 - [How to pilot this without betting anything](#how-to-pilot-this-without-betting-anything)
 
@@ -574,6 +575,27 @@ if answers["needs_generation"].noul > 0.7 and answers["route"].confidence > 0.8:
 Whatever assembles the state decides what the model is allowed to know. Pad it and you lose
 accuracy; ground it in a weak source and you get a beautifully calibrated judgment about
 bad material.
+
+---
+
+## See it running
+
+If you would rather watch the patterns than read them, [`simulations/`](./simulations) has an
+animated, interactive page for each cookbook — built for someone who does not write code.
+Open [`simulations/index.html`](./simulations/index.html) in a browser; no build step, no keys,
+and no model is actually called.
+
+| | Simulation | What you can play with |
+|---|---|---|
+| 01 | [Support triage cascade](./simulations/01-triage-cascade.html) | Drag the confidence floor and watch tickets move between the automated and human paths |
+| 02 | [The gatekeeper](./simulations/02-rag-gatekeeper.html) | Raise the relevance bar; watch a prompt-injection document get quarantined |
+| 03 | [The checkpoint](./simulations/03-agent-guardrails.html) | Move each hazard threshold independently and see verdicts flip |
+| 04 | [The second pair of eyes](./simulations/04-output-verifier.html) | Step through four drafts and watch six checks resolve |
+| 05 | [Scoring while they wait](./simulations/05-lead-scoring.html) | Re-weight the scoring formula and watch every lead re-sort live |
+| 06 | [Picking the right brain](./simulations/06-model-router.html) | Watch requests fan out across no-model, small, reasoning and human paths |
+
+The numbers in them are illustrative rather than measured — they exist to make the *shape*
+legible, which is the part that transfers.
 
 ---
 
