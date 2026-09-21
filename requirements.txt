@@ -1,0 +1,11 @@
+# The only hard requirement.
+typesafe-sdk>=0.1
+
+# Optional: the frontier models the cookbooks hand work off to.
+# Install what you actually have keys for.
+openai>=1.0
+anthropic>=0.40
+google-genai>=1.0
+
+# Used by the cookbooks for local .env loading.
+python-dotenv>=1.0
