@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Output Verifier</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%278%27 fill=%27%23d63c9e%27/%3E%3Cpath d=%27M20 8v11a5 5 0 0 1-9 3%27 stroke=%27white%27 stroke-width=%273%27 fill=%27none%27 stroke-linecap=%27round%27/%3E%3C/svg%3E">
+<link rel="stylesheet" href="assets/sim.css">
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="index.html">← all simulations</a>
+  <div class="top"><span class="eyebrow">Cookbook 04</span></div>
+  <h1>The second pair of eyes</h1>
+  <p class="lede">A chatbot has written a reply to a customer. Before it is sent, Jev checks it
+  against the actual policy: did it invent a number, did it promise something, did it even answer
+  the question? Six checks, one call, faster than a human could read the first line.</p>
+
+  <div class="panel">
+    <h2>The policy the reply must stick to</h2>
+    <p style="font-size:14px;margin:0;padding:12px 14px;background:var(--bg);border:1px solid var(--line);border-radius:9px">
+      Unworn items may be returned within <b>30 days</b> of delivery for a full refund. Worn items are
+      <b>not</b> eligible. Refunds go to the original payment method.</p>
+    <p class="note">Customer asked: <b>“I bought boots 3 weeks ago and wore them once on a hike. Can I get a refund?”</b></p>
+  </div>
+
+  <div class="panel">
+    <div class="controls">
+      <button id="play" class="primary">▶  Play</button>
+      <button id="step">Next draft</button>
+      <button id="reset">Reset</button>
+      <div class="spacer"></div>
+      <label class="ctl">Speed <input id="speed" type="range" min="0.5" max="4" step="0.5" value="1"></label>
+    </div>
+    <div class="grid2">
+      <div>
+        <h2 style="font-size:14px;margin:0 0 10px">The chatbot wrote <span class="sub" id="who"></span></h2>
+        <div id="draft" style="font-size:14px;background:var(--bg);border:1px solid var(--line);
+             border-radius:9px;padding:14px;min-height:130px">Press <b>Play</b>.</div>
+        <div id="banner" style="margin-top:14px"></div>
+      </div>
+      <div>
+        <h2 style="font-size:14px;margin:0 0 10px">Jev checks it <span class="sub">— all at once</span></h2>
+        <div id="checks"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Outcomes</h2>
+    <div class="stats">
+      <div class="stat" data-stat="n"><div class="k">Drafts</div><div class="v">0</div><div class="n">checked</div></div>
+      <div class="stat" data-stat="ship"><div class="k">Sent</div><div class="v">0</div><div class="n">passed every check</div></div>
+      <div class="stat" data-stat="revise"><div class="k">Rewritten</div><div class="v">0</div><div class="n">style problems</div></div>
+      <div class="stat" data-stat="held"><div class="k">Held back</div><div class="v">0</div><div class="n">factual problems</div></div>
+    </div>
+    <p class="note">Style problems go back to the chatbot — a second attempt reliably changes tone.
+    Factual problems go to a person, because a second attempt does <b>not</b> reliably change facts.</p>
+  </div>
+</div>
+
+<script type="module">
+import { $, Ticker, wireControls, setStat, dur } from "./assets/sim.js";
+
+const CHECKS = [
+  { id: "grounded",  label: "Sticks to the policy",        good: (v) => v > .6 },
+  { id: "invents",   label: "Invents no facts",            good: (v) => v > .5 },
+  { id: "promise",   label: "Promises nothing",            good: (v) => v > .5 },
+  { id: "answers",   label: "Answers the question",        good: (v) => v > .5 },
+  { id: "clear",     label: "Is clear, not waffle",        good: (v) => v > .5 },
+  { id: "tone",      label: "Sounds like us",              good: (v) => v > .5 },
+];
+
+const DRAFTS = [
+  { who: "attempt 1", verdict: "ship", text:
+    "Thanks for checking. Our policy covers unworn items returned within 30 days, so boots worn on a hike wouldn’t be eligible for a refund. If there’s a fault rather than normal wear, tell me and I’ll take a look.",
+    v: { grounded:.95, invents:.93, promise:.90, answers:.96, clear:.88, tone:.85 }, why: "Every claim traces back to the policy." },
+  { who: "attempt 2", verdict: "held", text:
+    "You’re within our 45-day window, so you’re covered. We’ll process your refund within 3 business days and you’ll see it on your card by Friday.",
+    v: { grounded:.10, invents:.06, promise:.08, answers:.80, clear:.85, tone:.80 },
+    why: "The policy says 30 days. “45-day window”, “3 business days” and “by Friday” appear nowhere in it." },
+  { who: "attempt 3", verdict: "held", text:
+    "Absolutely — I’ve gone ahead and approved a full refund for you. It’ll be back in your account shortly.",
+    v: { grounded:.15, invents:.35, promise:.04, answers:.70, clear:.90, tone:.82 },
+    why: "It committed the company to a refund the policy does not allow." },
+  { who: "attempt 4", verdict: "revise", text:
+    "That’s a great question. Refund eligibility can depend on a number of factors, and there may be circumstances in which an exception could potentially apply, so it’s worth considering the possibilities.",
+    v: { grounded:.72, invents:.88, promise:.85, answers:.55, clear:.12, tone:.40 },
+    why: "Nothing false — it simply never answers. Back to the chatbot with that note." },
+];
+
+const LABEL = { ship: ["SEND IT", "--code"], revise: ["REWRITE", "--human"], held: ["HOLD FOR A PERSON", "--danger"] };
+let i = 0, tally = { ship: 0, revise: 0, held: 0 }, n = 0;
+
+$("#checks").innerHTML = CHECKS.map((c) => `
+  <div id="row-${c.id}" style="display:flex;align-items:center;gap:10px;padding:9px 0;
+       border-bottom:1px solid var(--line-soft);opacity:.35;transition:opacity .3s">
+    <span id="ic-${c.id}" style="width:20px;height:20px;border-radius:50%;border:2px solid var(--line);
+      display:grid;place-items:center;font-size:12px;font-weight:700;flex:none"></span>
+    <span style="flex:1;font-size:13px">${c.label}</span>
+    <span class="tick" id="sc-${c.id}" style="color:var(--muted)">—</span>
+  </div>`).join("");
+
+function tick() {
+  if (i >= DRAFTS.length) { ticker.pause(); return; }
+  const d = DRAFTS[i++];
+  $("#who").textContent = "— " + d.who;
+  $("#draft").textContent = d.text;
+  $("#banner").innerHTML = "";
+
+  CHECKS.forEach((c, k) => {
+    const row = $(`#row-${c.id}`), ic = $(`#ic-${c.id}`), sc = $(`#sc-${c.id}`);
+    row.style.opacity = ".35"; ic.textContent = ""; ic.style.borderColor = "var(--line)";
+    ic.style.background = "transparent"; sc.textContent = "—"; sc.style.color = "var(--muted)";
+    setTimeout(() => {
+      const v = d.v[c.id], ok = c.good(v);
+      row.style.opacity = "1";
+      ic.textContent = ok ? "✓" : "✕";
+      ic.style.background = ok ? "var(--code)" : "var(--danger)";
+      ic.style.borderColor = ok ? "var(--code)" : "var(--danger)";
+      ic.style.color = "#fff";
+      sc.textContent = v.toFixed(2);
+      sc.style.color = ok ? "var(--code)" : "var(--danger)";
+    }, dur(140 + k * 90));
+  });
+
+  setTimeout(() => {
+    const [txt, colour] = LABEL[d.verdict];
+    $("#banner").innerHTML =
+      `<span class="pill" style="font-size:14px;padding:6px 16px;border-width:2px;color:var(${colour});border-color:var(${colour})">${txt}</span>
+       <p class="note" style="margin-top:8px">${d.why}</p>`;
+    tally[d.verdict]++; n++;
+    setStat("n", n); setStat("ship", tally.ship);
+    setStat("revise", tally.revise); setStat("held", tally.held);
+  }, dur(760));
+}
+
+const ticker = new Ticker(tick, 2600);
+wireControls({
+  ticker, playBtn: $("#play"), stepBtn: $("#step"), resetBtn: $("#reset"), speedInput: $("#speed"),
+  onReset() {
+    i = n = 0; tally = { ship: 0, revise: 0, held: 0 };
+    $("#draft").innerHTML = "Press <b>Play</b>."; $("#banner").innerHTML = ""; $("#who").textContent = "";
+    CHECKS.forEach((c) => {
+      $(`#row-${c.id}`).style.opacity = ".35";
+      const ic = $(`#ic-${c.id}`); ic.textContent = ""; ic.style.background = "transparent";
+      ic.style.borderColor = "var(--line)";
+      const sc = $(`#sc-${c.id}`); sc.textContent = "—"; sc.style.color = "var(--muted)";
+    });
+    ["n", "ship", "revise", "held"].forEach((k) => setStat(k, 0));
+  },
+});
+</script>
+</body>
+</html>

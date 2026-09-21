@@ -7,6 +7,9 @@ between the Jev part and the frontier-model part. The Jev half runs with only
 `TYPESAFE_API_KEY` set; the other half prints a placeholder and tells you which key it
 wanted.
 
+Prefer to watch first? Each cookbook has an animated counterpart in
+[`../simulations/`](../simulations) that needs no keys and no Python.
+
 ```bash
 pip install -r ../requirements.txt
 cp ../.env.example ../.env   # add TYPESAFE_API_KEY at minimum
@@ -19,12 +22,12 @@ python 01_triage_cascade.py
 
 | # | Pattern | Jev's job | The LLM's job | Needs |
 |---|---|---|---|---|
-| **[01](./01_triage_cascade.py)** | **Support triage cascade** | Classify intent + rate complexity, in one call | Answer, from a *narrow* specialist prompt — but only on two of five branches | `ANTHROPIC` or `OPENAI` |
-| **[02](./02_rag_gatekeeper.py)** | **RAG gatekeeper** | Score every retrieved passage for relevance, contradiction, and prompt injection | Answer from the survivors, with citations | `ANTHROPIC` or `OPENAI` |
-| **[03](./03_agent_guardrails.py)** | **Tool-call gating** | Judge every proposed tool call on four independent hazards | — (this sits *in front of* whatever agent you run) | none |
-| **[04](./04_output_verifier.py)** | **LLM output verifier** | Judge the draft for grounding, invention, promises, hedging, and tone | Generate the draft, and revise it on style failures | `OPENAI` or `ANTHROPIC` |
-| **[05](./05_realtime_lead_scoring.py)** | **Real-time scoring** | Four weighted scores + spam + territory, inside a form-submit request | Write the first-touch email — tier A only | `OPENAI` or `ANTHROPIC` |
-| **[06](./06_model_router.py)** | **Cross-provider router** | Decide what the request *needs*, then pick the tier | Whichever of GPT / Claude / Gemini the axes selected | any / all |
+| **[01](./01_triage_cascade.py)** · [▶](../simulations/01-triage-cascade.html) | **Support triage cascade** | Classify intent + rate complexity, in one call | Answer, from a *narrow* specialist prompt — but only on two of five branches | `ANTHROPIC` or `OPENAI` |
+| **[02](./02_rag_gatekeeper.py)** · [▶](../simulations/02-rag-gatekeeper.html) | **RAG gatekeeper** | Score every retrieved passage for relevance, contradiction, and prompt injection | Answer from the survivors, with citations | `ANTHROPIC` or `OPENAI` |
+| **[03](./03_agent_guardrails.py)** · [▶](../simulations/03-agent-guardrails.html) | **Tool-call gating** | Judge every proposed tool call on four independent hazards | — (this sits *in front of* whatever agent you run) | none |
+| **[04](./04_output_verifier.py)** · [▶](../simulations/04-output-verifier.html) | **LLM output verifier** | Judge the draft for grounding, invention, promises, hedging, and tone | Generate the draft, and revise it on style failures | `OPENAI` or `ANTHROPIC` |
+| **[05](./05_realtime_lead_scoring.py)** · [▶](../simulations/05-lead-scoring.html) | **Real-time scoring** | Four weighted scores + spam + territory, inside a form-submit request | Write the first-touch email — tier A only | `OPENAI` or `ANTHROPIC` |
+| **[06](./06_model_router.py)** · [▶](../simulations/06-model-router.html) | **Cross-provider router** | Decide what the request *needs*, then pick the tier | Whichever of GPT / Claude / Gemini the axes selected | any / all |
 
 ---
 

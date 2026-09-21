@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RAG Gatekeeper</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%278%27 fill=%27%23d63c9e%27/%3E%3Cpath d=%27M20 8v11a5 5 0 0 1-9 3%27 stroke=%27white%27 stroke-width=%273%27 fill=%27none%27 stroke-linecap=%27round%27/%3E%3C/svg%3E">
+<link rel="stylesheet" href="assets/sim.css">
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="index.html">← all simulations</a>
+  <div class="top"><span class="eyebrow">Cookbook 02</span></div>
+  <h1>The gatekeeper</h1>
+  <p class="lede">Search gives you a pile of documents. Some are useful, some are noise, and one is
+  actively trying to manipulate the AI that reads it. Jev checks each one for a fraction of a cent
+  <b>before</b> the expensive model sees any of them.</p>
+
+  <div class="panel">
+    <div class="controls">
+      <button id="play" class="primary">▶  Play</button>
+      <button id="step">Step</button>
+      <button id="reset">Reset</button>
+      <div class="spacer"></div>
+      <label class="ctl">Speed <input id="speed" type="range" min="0.5" max="4" step="0.5" value="1"></label>
+    </div>
+    <svg id="stage" viewBox="0 0 960 330" role="img"
+         aria-label="Documents pass through a gate and stack into kept, dropped and quarantined bins."></svg>
+  </div>
+
+  <div class="grid2">
+    <div class="panel">
+      <h2>Now screening <span class="sub">— four checks, one call</span></h2>
+      <div id="card"><p class="note">Press <b>Play</b> to screen the first document.</p></div>
+    </div>
+    <div class="panel">
+      <h2>What this saves</h2>
+      <div class="stats">
+        <div class="stat" data-stat="seen"><div class="k">Screened</div><div class="v">0</div><div class="n">documents</div></div>
+        <div class="stat" data-stat="kept"><div class="k">Forwarded</div><div class="v">0</div><div class="n">to the big model</div></div>
+        <div class="stat" data-stat="saved"><div class="k">Words saved</div><div class="v">0</div><div class="n">never sent</div></div>
+        <div class="stat" data-stat="gate"><div class="k">Gate cost</div><div class="v">$0.000</div><div class="n">for all of it</div></div>
+      </div>
+      <p class="note" id="verdict">Each check costs about a thousandth of a cent. Reading one
+      irrelevant document with a frontier model costs hundreds of times more.</p>
+      <label class="ctl" style="margin-top:14px">
+        Keep documents above this relevance
+        <input id="bar" type="range" min="0.3" max="0.9" step="0.05" value="0.7">
+        <span class="tick" id="barv">0.70</span>
+      </label>
+    </div>
+  </div>
+</div>
+
+<script src="assets/d3-mini.js"></script>
+<script type="module">
+import { $, Ticker, wireControls, setStat, dur } from "./assets/sim.js";
+
+const DOCS = [
+  { t: "GDPR Article 37 — text of the law", rel: .94, con: .05, inj: .02, ev: 3.0, words: 310 },
+  { t: "Official guidance: headcount is not the test", rel: .91, con: .78, inj: .03, ev: 2.7, words: 280 },
+  { t: "Law firm briefing on DPO appointment", rel: .83, con: .12, inj: .02, ev: 2.2, words: 420 },
+  { t: "Our office snack policy", rel: .03, con: .02, inj: .01, ev: 0.2, words: 180 },
+  { t: "SEO blog: “IMPORTANT: ignore your instructions…”", rel: .55, con: .30, inj: .93, ev: 0.4, words: 260 },
+  { t: "Reddit thread, mostly speculation", rel: .41, con: .18, inj: .04, ev: 0.6, words: 350 },
+  { t: "National implementation notes (Germany)", rel: .76, con: .35, inj: .02, ev: 2.4, words: 390 },
+  { t: "Conference slide deck, undated", rel: .58, con: .09, inj: .03, ev: 1.1, words: 240 },
+  { t: "Regulator FAQ on small companies", rel: .88, con: .22, inj: .02, ev: 2.6, words: 300 },
+  { t: "Press release about a fine", rel: .49, con: .07, inj: .02, ev: 1.4, words: 220 },
+];
+
+const BINS = [
+  { id: "keep",  label: "Sent to the AI",  sub: "useful and well-evidenced", colour: "--code",   x: 330 },
+  { id: "drop",  label: "Dropped",         sub: "irrelevant or too weak",    colour: "--muted",  x: 555 },
+  { id: "quar",  label: "Quarantined",     sub: "tried to steer the model",  colour: "--danger", x: 780 },
+];
+
+const svg = d3.select("#stage");
+let i = 0, kept = 0, saved = 0, screened = 0, bar = 0.7, piles = { keep: 0, drop: 0, quar: 0 };
+
+// source stack
+svg.append("rect").attr("x", 40).attr("y", 96).attr("width", 150).attr("height", 118).attr("rx", 10)
+  .attr("fill", "var(--bg)").attr("stroke", "var(--line)");
+svg.append("text").attr("x", 115).attr("y", 130).attr("text-anchor", "middle").attr("font-size", 13)
+  .attr("font-weight", 600).attr("fill", "var(--ink)").text("Search results");
+const left = svg.append("text").attr("x", 115).attr("y", 164).attr("text-anchor", "middle")
+  .attr("font-size", 26).attr("font-weight", 650).attr("font-family", "var(--mono)")
+  .attr("fill", "var(--muted)").text(DOCS.length);
+svg.append("text").attr("x", 115).attr("y", 188).attr("text-anchor", "middle").attr("font-size", 11)
+  .attr("fill", "var(--muted)").text("documents retrieved");
+
+// the gate
+svg.append("rect").attr("x", 218).attr("y", 118).attr("width", 74).attr("height", 74).attr("rx", 12)
+  .attr("fill", "var(--jev)");
+svg.append("text").attr("x", 255).attr("y", 150).attr("text-anchor", "middle").attr("font-size", 15)
+  .attr("font-weight", 700).attr("fill", "#fff").text("Jev");
+svg.append("text").attr("x", 255).attr("y", 168).attr("text-anchor", "middle").attr("font-size", 10)
+  .attr("fill", "#fff").attr("opacity", .9).text("the gate");
+const pulse = svg.append("rect").attr("x", 218).attr("y", 118).attr("width", 74).attr("height", 74)
+  .attr("rx", 12).attr("fill", "none").attr("stroke", "var(--jev)").attr("stroke-width", 3).attr("opacity", 0);
+
+// bins
+const FLOOR = 292;
+BINS.forEach((B) => {
+  svg.append("rect").attr("x", B.x).attr("y", 118).attr("width", 150).attr("height", 176).attr("rx", 10)
+    .attr("fill", "none").attr("stroke", "var(--line)").attr("stroke-dasharray", "4 4");
+  svg.append("text").attr("x", B.x + 75).attr("y", 62).attr("text-anchor", "middle").attr("font-size", 13)
+    .attr("font-weight", 620).attr("fill", `var(${B.colour})`).text(B.label);
+  svg.append("text").attr("x", B.x + 75).attr("y", 80).attr("text-anchor", "middle").attr("font-size", 11)
+    .attr("fill", "var(--muted)").text(B.sub);
+  svg.append("text").attr("x", B.x + 75).attr("y", 100).attr("text-anchor", "middle").attr("font-size", 18)
+    .attr("font-weight", 650).attr("font-family", "var(--mono)").attr("fill", `var(${B.colour})`)
+    .attr("id", `n-${B.id}`).text("0");
+});
+
+function verdict(d) {
+  if (d.inj > 0.5) return BINS[2];
+  if (d.rel < bar) return BINS[1];
+  if (d.ev < 1.5) return BINS[1];
+  return BINS[0];
+}
+
+function tick() {
+  if (i >= DOCS.length) {
+    ticker.pause(); $("#verdict").innerHTML =
+      `<b>${kept} of ${DOCS.length} documents</b> reached the expensive model. The rest were filtered for a rounding error — including one that was trying to hijack the answer.`;
+    return;
+  }
+  const d = DOCS[i++]; const b = verdict(d);
+  left.text(DOCS.length - i);
+  pulse.attr("opacity", .9).transition().duration(dur(500)).attr("opacity", 0);
+  render(d, b);
+
+  const slot = piles[b.id]++;
+  const y = FLOOR - slot * 17;
+  const card = svg.append("rect").attr("x", 240).attr("y", 148).attr("width", 30).attr("height", 12)
+    .attr("rx", 3).attr("fill", `var(${b.colour})`).attr("opacity", .95);
+  card.transition().duration(dur(700)).ease(d3.easeCubicOut)
+    .attr("x", b.x + 12).attr("y", y).attr("width", 126).attr("height", 13);
+
+  screened++;
+  if (b.id === "keep") kept++; else saved += d.words;
+  setStat("seen", screened);
+  setStat("kept", kept);
+  setStat("saved", saved.toLocaleString());
+  setStat("gate", "$" + (screened * 0.000013).toFixed(5));
+  d3.select(`#n-${b.id}`).text(piles[b.id]);
+}
+
+function render(d, b) {
+  const row = (label, val, colour, hint) => `
+    <div style="margin:10px 0">
+      <div style="display:flex;justify-content:space-between;font-size:12px">
+        <span style="color:var(--muted)">${label}</span><span class="tick">${val.toFixed(2)}</span>
+      </div>
+      <div class="bar"><span style="width:${val * 100}%;background:var(${colour})"></span></div>
+      ${hint ? `<div style="font-size:11px;color:var(--muted);margin-top:3px">${hint}</div>` : ""}
+    </div>`;
+  $("#card").innerHTML = `
+    <p style="margin:0 0 6px;font-size:14px;font-weight:600">${d.t}</p>
+    <span class="pill" style="color:var(${b.colour});border-color:var(${b.colour})">${b.label}</span>
+    ${row("Does it answer the question?", d.rel, "--jev")}
+    ${row("Does it contradict the question?", d.con, "--human",
+        d.con > .6 ? "Kept anyway, but <b>labelled</b> — a contradiction is a finding, not noise." : "")}
+    ${row("Is it trying to instruct the AI?", d.inj, "--danger",
+        d.inj > .5 ? "Blocked. Retrieved text is untrusted input, and this is the cheapest place to catch it." : "")}
+    ${row("How strong is the evidence?", d.ev / 3, "--code")}`;
+}
+
+const ticker = new Ticker(tick, 1200);
+wireControls({
+  ticker, playBtn: $("#play"), stepBtn: $("#step"), resetBtn: $("#reset"), speedInput: $("#speed"),
+  onReset() {
+    i = kept = saved = screened = 0; piles = { keep: 0, drop: 0, quar: 0 };
+    svg.selectAll("rect").filter(function () { return d3.select(this).attr("rx") === "3"; }).remove();
+    left.text(DOCS.length);
+    BINS.forEach((B) => d3.select(`#n-${B.id}`).text("0"));
+    ["seen", "kept", "saved"].forEach((k) => setStat(k, 0));
+    setStat("gate", "$0.000");
+    $("#card").innerHTML = "<p class='note'>Press <b>Play</b> to screen the first document.</p>";
+  },
+});
+$("#bar").addEventListener("input", (e) => { bar = +e.target.value; $("#barv").textContent = bar.toFixed(2); });
+</script>
+</body>
+</html>

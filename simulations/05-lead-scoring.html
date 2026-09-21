@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Real-Time Lead Scoring</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%278%27 fill=%27%23d63c9e%27/%3E%3Cpath d=%27M20 8v11a5 5 0 0 1-9 3%27 stroke=%27white%27 stroke-width=%273%27 fill=%27none%27 stroke-linecap=%27round%27/%3E%3C/svg%3E">
+<link rel="stylesheet" href="assets/sim.css">
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="index.html">← all simulations</a>
+  <div class="top"><span class="eyebrow">Cookbook 05</span></div>
+  <h1>Scoring while they wait</h1>
+  <p class="lede">Someone fills in a form on your website. Before the page even finishes saying
+  “thanks”, Jev has read it, rated it on four things, and your code has decided who should
+  follow up. <b>Drag the sliders</b> — the priorities are numbers in your code, not words in a prompt.</p>
+
+  <div class="panel">
+    <div class="controls">
+      <button id="play" class="primary">▶  Play</button>
+      <button id="step">Next lead</button>
+      <button id="reset">Reset</button>
+      <div class="spacer"></div>
+      <label class="ctl">Speed <input id="speed" type="range" min="0.5" max="4" step="0.5" value="1"></label>
+    </div>
+
+    <div class="grid2">
+      <div>
+        <h2 style="font-size:14px;margin:0 0 10px">The form that just came in</h2>
+        <div id="lead" style="background:var(--bg);border:1px solid var(--line);border-radius:9px;
+             padding:14px;min-height:150px;font-size:14px">Press <b>Play</b>.</div>
+        <div id="clock" style="margin-top:12px;font-family:var(--mono);font-size:12px;color:var(--muted)"></div>
+      </div>
+      <div>
+        <h2 style="font-size:14px;margin:0 0 10px">What Jev rated it on</h2>
+        <div id="factors"></div>
+        <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--line)">
+          <div style="display:flex;justify-content:space-between;align-items:baseline">
+            <span style="font-size:13px;font-weight:620">Your combined score</span>
+            <span class="tick" id="composite" style="font-size:20px;font-weight:650">0.00</span>
+          </div>
+          <div class="bar" style="height:11px;margin-top:8px"><span id="cbar" style="width:0%;background:var(--jev)"></span></div>
+          <div id="tier" style="margin-top:12px"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="panel">
+      <h2>Your priorities <span class="sub">— change them, watch everyone re-sort</span></h2>
+      <div id="weights"></div>
+      <p class="note" id="wsum"></p>
+    </div>
+    <div class="panel">
+      <h2>Everyone scored so far</h2>
+      <table class="rows"><thead><tr><th>Who</th><th>Score</th><th>Goes to</th></tr></thead>
+      <tbody id="table"><tr><td colspan="3" class="note" style="border:0">Nothing yet.</td></tr></tbody></table>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { $, Ticker, wireControls, dur } from "./assets/sim.js";
+
+const FACTORS = [
+  { id: "budget",    label: "Do they have money to spend?", w: .40 },
+  { id: "seniority", label: "Can they sign the cheque?",    w: .20 },
+  { id: "fit",       label: "Are they the right customer?", w: .25 },
+  { id: "urgency",   label: "Do they need it soon?",        w: .15 },
+];
+
+const LEADS = [
+  { name: "Priya Raman", role: "VP Engineering, Northwind Logistics (600 staff)",
+    msg: "We’ve budgeted for this quarter and have a shortlist of three. Procurement is already involved. Can we get a technical deep-dive next week?",
+    budget: 3.0, seniority: 3.0, fit: 2.8, urgency: 2.9, spam: .02 },
+  { name: "Kenji Watanabe", role: "Data Platform Lead, Sakura Retail (2,000 staff)",
+    msg: "Evaluating options for next fiscal year. No timeline yet, but I’d like to understand how pricing scales past 10M documents.",
+    budget: 1.6, seniority: 1.9, fit: 2.7, urgency: 0.7, spam: .03 },
+  { name: "Sam Whitfield", role: "Student",
+    msg: "doing a class project on AI, can i get a free account",
+    budget: 0.1, seniority: 0.1, fit: 0.3, urgency: 0.5, spam: .22 },
+  { name: "Dana Okafor", role: "Director of Ops, Meridian Health (400 staff)",
+    msg: "Our current vendor’s contract ends in eight weeks and we need something in place before then. Who should I talk to?",
+    budget: 2.2, seniority: 2.4, fit: 2.5, urgency: 3.0, spam: .02 },
+  { name: "ACME SEO", role: "“Growth Hacker”, acmeseo.biz",
+    msg: "Hi! We can get your site to page 1 of Google GUARANTEED. Reply for a free audit!!!",
+    budget: 0.2, seniority: 0.4, fit: 0.1, urgency: 1.2, spam: .94 },
+];
+
+const TIERS = [
+  { min: .66, name: "A sales rep calls today", colour: "--code" },
+  { min: .40, name: "Added to the nurture list", colour: "--llm" },
+  { min: 0,   name: "Low priority queue",       colour: "--muted" },
+];
+
+let i = 0, scored = [];
+
+// ---- weight sliders -----------------------------------------------------
+$("#weights").innerHTML = FACTORS.map((f) => `
+  <label class="ctl" style="display:block;margin:12px 0">
+    <div style="display:flex;justify-content:space-between;color:var(--ink);font-size:13px">
+      <span>${f.label}</span><span class="tick" id="w-${f.id}">${(f.w * 100).toFixed(0)}%</span>
+    </div>
+    <input type="range" data-f="${f.id}" min="0" max="0.7" step="0.05" value="${f.w}" style="width:100%;margin-top:4px">
+  </label>`).join("");
+
+$("#weights").addEventListener("input", (e) => {
+  FACTORS.find((f) => f.id === e.target.dataset.f).w = +e.target.value;
+  FACTORS.forEach((f) => { $(`#w-${f.id}`).textContent = (f.w / total() * 100).toFixed(0) + "%"; });
+  repaintAll();
+});
+const total = () => FACTORS.reduce((s, f) => s + f.w, 0) || 1;
+
+// ---- scoring ------------------------------------------------------------
+const score = (L) => FACTORS.reduce((s, f) => s + (f.w / total()) * (L[f.id] / 3), 0);
+const tierOf = (s) => TIERS.find((t) => s >= t.min);
+
+function tick() {
+  if (i >= LEADS.length) { ticker.pause(); return; }
+  const L = LEADS[i++];
+
+  $("#lead").innerHTML = `<div style="font-weight:650">${L.name}</div>
+    <div style="color:var(--muted);font-size:12.5px;margin-bottom:10px">${L.role}</div>
+    <div>“${L.msg}”</div>`;
+
+  $("#clock").textContent = "reading…";
+  setTimeout(() => { $("#clock").innerHTML =
+    `scored in <b style="color:var(--jev)">190 ms</b> — the form was still submitting`; }, dur(420));
+
+  if (L.spam > .8) {
+    $("#factors").innerHTML = `<p class="note" style="color:var(--danger)">
+      A separate yes/no question flagged this as spam (${L.spam.toFixed(2)}). Dropped before scoring.</p>`;
+    $("#composite").textContent = "—"; $("#cbar").style.width = "0%";
+    $("#tier").innerHTML = `<span class="pill" style="color:var(--danger);border-color:var(--danger)">DROPPED — spam</span>`;
+    scored.push({ ...L, dropped: true }); repaintTable(); return;
+  }
+
+  $("#factors").innerHTML = FACTORS.map((f) => `
+    <div style="margin:11px 0">
+      <div style="display:flex;justify-content:space-between;font-size:12.5px">
+        <span style="color:var(--muted)">${f.label}</span>
+        <span class="tick" id="f-${f.id}">${L[f.id].toFixed(1)} / 3</span>
+      </div>
+      <div class="bar"><span id="fb-${f.id}" style="width:0%;background:var(--jev)"></span></div>
+    </div>`).join("");
+  FACTORS.forEach((f, k) => setTimeout(() => {
+    $(`#fb-${f.id}`).style.width = (L[f.id] / 3 * 100) + "%";
+  }, dur(120 + k * 90)));
+
+  scored.push(L);
+  setTimeout(() => { repaintAll(); }, dur(460));
+}
+
+function repaintAll() {
+  const L = scored[scored.length - 1];
+  if (L && !L.dropped) {
+    const s = score(L), t = tierOf(s);
+    $("#composite").textContent = s.toFixed(2);
+    $("#cbar").style.width = (s * 100) + "%";
+    $("#cbar").style.background = `var(${t.colour})`;
+    $("#tier").innerHTML =
+      `<span class="pill" style="font-size:13px;padding:5px 14px;border-width:2px;color:var(${t.colour});border-color:var(${t.colour})">${t.name}</span>`;
+  }
+  $("#wsum").innerHTML = `These four numbers are a line of arithmetic in your code. Changing one is a
+    pull request with a diff, a test and a revert — <b>not</b> a prompt rewrite whose effect you cannot bound.`;
+  repaintTable();
+}
+
+function repaintTable() {
+  const tb = $("#table");
+  if (!scored.length) return;
+  tb.innerHTML = scored.map((L) => {
+    if (L.dropped) return `<tr><td>${L.name}</td><td class="tick">—</td>
+      <td><span class="pill" style="color:var(--danger);border-color:var(--danger)">spam</span></td></tr>`;
+    const s = score(L), t = tierOf(s);
+    return `<tr><td>${L.name}</td><td class="tick">${s.toFixed(2)}</td>
+      <td><span class="pill" style="color:var(${t.colour});border-color:var(${t.colour})">${t.name}</span></td></tr>`;
+  }).join("");
+}
+
+const ticker = new Ticker(tick, 2400);
+wireControls({
+  ticker, playBtn: $("#play"), stepBtn: $("#step"), resetBtn: $("#reset"), speedInput: $("#speed"),
+  onReset() {
+    i = 0; scored = [];
+    $("#lead").innerHTML = "Press <b>Play</b>."; $("#factors").innerHTML = "";
+    $("#clock").textContent = ""; $("#composite").textContent = "0.00";
+    $("#cbar").style.width = "0%"; $("#tier").innerHTML = "";
+    $("#table").innerHTML = `<tr><td colspan="3" class="note" style="border:0">Nothing yet.</td></tr>`;
+  },
+});
+$("#wsum").innerHTML = "Drag a slider once a lead has been scored.";
+</script>
+</body>
+</html>
