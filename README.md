@@ -25,7 +25,6 @@ you already built around OpenAI, Claude, or Gemini.
 - [Cookbooks: Jev + your existing LLM](#cookbooks-jev--your-existing-llm)
 - [Setup](#setup)
 - [How to pilot this without betting anything](#how-to-pilot-this-without-betting-anything)
-- [Sources](#sources)
 
 ---
 
@@ -53,18 +52,28 @@ got routed through a chat model because a chat model was the only thing availabl
 understood language at all. You paid for that mismatch in latency budgets, retry loops,
 review queues, and a pile of pilots that worked in the demo and never shipped.
 
-```mermaid
-flowchart LR
-    subgraph LLM["LLM · System 2"]
-        direction TB
-        L1["prompt"] --> L2["token"] --> L3["token"] --> L4["token"] --> L5["...string"]
-        L5 --> L6["parse"] --> L7["validate"] --> L8["retry if it failed"]
-    end
-    subgraph JEV["Jev · System One"]
-        direction TB
-        J1["state + questions"] --> J2["evaluate every question<br/>against the state<br/>in parallel"]
-        J2 --> J3["typed answers<br/>+ probabilities<br/>+ confidence"]
-    end
+```text
+  LLM · System 2 — sequential
+  ──────────────────────────────────────────────────────────────────
+
+    prompt ─▶ tok ─▶ tok ─▶ tok ─▶ tok ─▶ "…a string"
+                                               │
+                                               ▼
+                       parse ─▶ validate ─▶ retry on failure
+
+    every token waits for the one before it, then you parse the result
+
+
+  Jev · System One — parallel
+  ──────────────────────────────────────────────────────────────────
+
+                     ┌─▶ Q1 ─▶ choice + probabilities + confidence
+    state            ├─▶ Q2 ─▶ score  + probabilities + confidence
+    ingested once ───┤
+                     ├─▶ Q3 ─▶ noul
+                     └─▶ Q4 ─▶ choice + probabilities + confidence
+
+    every question sees the same state, all in one round trip
 ```
 
 | | Existing LLMs | System One + Jev |
@@ -652,14 +661,6 @@ decisions you never automated** because, until now, each one cost a tenth of a c
 three seconds too many.
 
 ---
-
-## Sources
-
-- [Jev and System One models: a working engineer's guide](https://www.exponenlabs.tech/pulse/jev-system-one-models-for-engineers) — ExponenLabs. The tonal and structural reference for this README.
-- [Introducing System One Models and Jev](https://typesafe.ai/blog/introducing-system-one-models-and-jev) — Diogo Almeida, TypeSafe
-- [TypeSafe documentation](https://docs.typesafe.ai/introduction) — primitives, confidence, patterns, API reference
-- [Jev 1.13 jaggedness](https://docs.typesafe.ai/model-jaggedness/jev-1.13) — read this one
-- [Loom walkthrough](https://www.loom.com/share/18c4dbcf8db546dfb2d7f2ef018e78e4)
 
 This is an independent, unofficial playground. Not affiliated with TypeSafe AI. All figures
 are as published by TypeSafe in September 2026 and are vendor-reported unless stated
