@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jev and System One models: a working engineer's guide</title>
+<meta name="description" content="What a System One model is, why type safety is structural rather than statistical, what calibration buys you architecturally, where Jev breaks, and four use cases with code.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%278%27 fill=%27%23d63c9e%27/%3E%3Cpath d=%27M20 8v11a5 5 0 0 1-9 3%27 stroke=%27white%27 stroke-width=%273%27 fill=%27none%27 stroke-linecap=%27round%27/%3E%3C/svg%3E">
+<link rel="stylesheet" href="assets/sim.css">
+<style>
+  .article { max-width: 74ch; }
+  .meta { color: var(--muted); font-size: 13px; font-family: var(--mono); margin: 0 0 22px; }
+  .meta a { color: inherit; }
+  .article h2 {
+    font-size: 21px; letter-spacing: -.02em; margin: 40px 0 12px;
+    padding-top: 22px; border-top: 1px solid var(--line-soft);
+  }
+  .article h3 { font-size: 16px; letter-spacing: -.01em; margin: 28px 0 10px; }
+  .article p { margin: 0 0 15px; }
+  .article ul, .article ol { margin: 0 0 15px; padding-left: 22px; }
+  .article li { margin-bottom: 9px; }
+  .article li > b { color: var(--ink); }
+  pre {
+    background: var(--panel); border: 1px solid var(--line); border-radius: var(--r);
+    box-shadow: var(--shadow); padding: 14px 16px; overflow-x: auto;
+    font-family: var(--mono); font-size: 12.5px; line-height: 1.55; margin: 0 0 18px;
+  }
+  pre code { font-size: inherit; }
+  :not(pre) > code {
+    background: var(--line-soft); border-radius: 5px; padding: 1px 5px;
+  }
+  .lang {
+    display: block; font-family: var(--mono); font-size: 10.5px; font-weight: 700;
+    letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px;
+  }
+  .article table.rows { margin: 0 0 18px; }
+  .article table.rows td:first-child { font-weight: 600; }
+  .callout {
+    background: var(--panel); border: 1px solid var(--line); border-left: 3px solid var(--jev);
+    border-radius: var(--r); padding: 14px 16px; margin: 0 0 18px; font-size: 14px;
+  }
+  .callout p:last-child { margin-bottom: 0; }
+  .faq { margin: 0 0 8px; }
+  .faq summary {
+    cursor: pointer; font-weight: 600; padding: 11px 0; border-bottom: 1px solid var(--line-soft);
+  }
+  .faq summary:focus-visible { outline: 2px solid var(--jev); outline-offset: 3px; }
+  .faq[open] summary { border-bottom-color: transparent; }
+  .faq > p { padding: 4px 0 12px; border-bottom: 1px solid var(--line-soft); margin: 0; }
+  .sources { font-size: 13px; color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="wrap article">
+  <a class="back" href="index.html">← all simulations</a>
+  <div class="top"><span class="eyebrow">Article</span></div>
+  <h1>Jev and System One models: a working engineer's guide to typed, calibrated AI decisions</h1>
+  <p class="meta">ExponenLabs · 21 September 2026 · 24 min read ·
+    <a href="https://www.exponenlabs.tech/pulse/jev-system-one-models-for-engineers">originally published on exponenlabs.tech</a></p>
+
+  <p class="lede">A new model shipped on 15 September 2026 that is worth an engineer's attention
+  for an unusual reason: it is deliberately worse than the models you already use. It cannot
+  write. It cannot explain itself. It cannot look anything up. It has no idea what happened in
+  the world after you stopped typing.</p>
+
+  <p>What TypeSafe's Jev does instead is answer bounded questions about a blob of state, all of
+  them at once, in the time it takes a database to return a moderately complex join. The company
+  calls the category a <b>System One model</b>, after Kahneman's fast, intuitive System 1, and the
+  pitch is aimed squarely at the gap between "the demo worked" and "we put it in the request path".</p>
+
+  <p>The founder, Diogo Almeida, worked on the instruction-following research behind ChatGPT at
+  OpenAI, and frames the launch around a question worth sitting with: models have been superhuman
+  at chat for years, so where is all the automation?</p>
+
+  <p>This piece is the technical read. What the architecture actually is, why the type-safety claim
+  is a structural property rather than a quality improvement, what calibration buys you
+  architecturally, where the model is documented to fall over, and four business use cases with
+  code you can adapt.</p>
+
+  <h2>The shape of the thing</h2>
+
+  <p>Forget "model" for a moment. The mental model that makes Jev click is a frontier-intelligence
+  function call: unstructured state in, typed probabilistic decisions out.</p>
+
+<pre><span class="lang">Python</span><code>from typesafe_sdk import Choice, Noul, Score, TypeSafeClient
+
+client = TypeSafeClient()  # reads TYPESAFE_API_KEY, defaults to jev-latest
+
+response = client.system_one(
+    state={
+        "ticket": {
+            "subject": "Duplicate charge",
+            "messages": [
+                {"from": "customer",
+                 "text": "I was charged twice for order A-104. Please refund the duplicate."},
+            ],
+        },
+        "order": {"id": "A-104", "charges": [
+            {"amount_usd": 49, "status": "captured"},
+            {"amount_usd": 49, "status": "captured"},
+        ]},
+        "refund_policy": "Duplicate charges are eligible for a refund.",
+    },
+    questions={
+        "department": Choice(
+            instructions="Which team should handle this",
+            criteria={
+                "billing": "Payment or subscription issues",
+                "technical": "Bugs or integration problems",
+                "sales": "Pricing or account questions",
+            },
+        ),
+        "frustration": Score(
+            instructions="How frustrated the customer appears",
+            criteria=["Calm, just stating facts",
+                      "Frustrated but civil",
+                      "Very angry, strong language"],
+        ),
+        "refund_requested": Noul(
+            instructions="The customer is explicitly asking for a refund"),
+        "policy_supports": Noul(
+            instructions="The stated refund policy covers this situation"),
+    },
+)
+
+dept = response.answers["department"]
+print(dept.choice, dept.confidence)          # "billing" 0.97
+print(response.answers["frustration"].score) # 1.035
+print(response.answers["refund_requested"].noul)  # 0.98</code></pre>
+
+  <p>There is no prompt here in the sense you are used to. There is <b>state</b> — a string, a JSON
+  object, or an array of text — and there are <b>questions</b>, each of which declares its own answer
+  space before the model runs. One endpoint, <code>POST https://api.typesafe.ai/v1/systemone</code>,
+  backs all of it.</p>
+
+  <h3>Three primitives, and only three</h3>
+
+  <p>The entire API surface is three question types. TypeSafe is explicit that this is the design,
+  not a limitation to route around.</p>
+
+  <table class="rows">
+    <thead><tr><th>Primitive</th><th>Asks</th><th>Returns</th></tr></thead>
+    <tbody>
+      <tr><td>Choice</td><td>Which one of these options?</td>
+          <td><code>.choice</code>, <code>.probabilities</code> per option, <code>.confidence</code></td></tr>
+      <tr><td>Score</td><td>Where on this ordered spectrum?</td>
+          <td><code>.score</code> (continuous, can land between levels), <code>.probabilities</code>, <code>.confidence</code></td></tr>
+      <tr><td>Noul</td><td>Is this statement true?</td>
+          <td><code>.noul</code> — a single probability from 0 to 1</td></tr>
+    </tbody>
+  </table>
+
+  <p><b>Choice</b> takes up to 255 options, each costing a few tokens. Because the marginal cost of
+  an option is so low, the guidance inverts the usual instinct to pre-filter: pass the full list of
+  teams, categories or SKUs rather than a shortlist. Add an explicit <code>other</code> option so the
+  model can say nothing fits, instead of picking the closest wrong thing.</p>
+
+  <p><b>Score</b> takes two to ten ordered levels, described in words rather than numbers. The level
+  index comes from array order, so level 0 is the first entry, and the returned score is continuous —
+  a <code>1.035</code> means "just past the second level". That continuity is the useful part: it lets
+  you threshold in code at a granularity the levels themselves do not express.</p>
+
+  <p><b>Noul</b> — TypeSafe's coinage for a probabilistic boolean — returns a bare number and, notably,
+  no confidence field. There is nothing to add: the number already is the belief.</p>
+
+<pre><span class="lang">TypeScript</span><code>import { choice, noul, TypeSafeClient } from "@typesafe-ai/sdk";
+
+const client = new TypeSafeClient();
+
+const response = await client.systemOne({
+  state: { document: "I was charged twice. Please fix this ASAP." },
+  questions: {
+    category: choice("What is this ticket about?", {
+      billing: "Payment or subscription issues",
+      technical: "Bugs or integration problems",
+      other: "Anything else",
+    }),
+    urgent: noul("The message conveys urgency"),
+  },
+});
+
+response.answers.category.choice;  // type inferred from your questions object</code></pre>
+
+  <p>The TypeScript SDK infers the result type from the questions you passed, so
+  <code>category.choice</code> is a union of your own option keys rather than <code>string</code>.
+  Your editor knows the answer space because you declared it.</p>
+
+  <h2>Why parallel sampling is the whole story</h2>
+
+  <p>Here is the architectural claim, and it is the one everything else follows from.</p>
+
+  <p>An autoregressive model generates one token at a time, each conditioned on every token before
+  it. That sequential dependency is what makes an LLM able to write an essay — and it is also what
+  makes it slow, because you cannot compute token n+1 until token n exists. If you ask an LLM ten
+  questions in one prompt, it answers them in sequence, in one long chain, and the tenth answer
+  waits for the first nine.</p>
+
+  <p>Jev gives up string generation and, with it, the sequential dependency. It ingests the state
+  once and evaluates every question against it in parallel, in a single query. TypeSafe describes
+  this as a new architecture with a purpose-built parallel sampler that is "incredibly efficient
+  and hardware-aware".</p>
+
+  <p>The practical consequence is a rule that will feel wrong for about a day: <b>ask everything up
+  front</b>. Adding a question barely changes response time, and costs only the tokens for that
+  question, which are cheap. TypeSafe calls this speculative fan-out, and its cookbook reports that
+  batching a 13-question regulatory briefing over a long article into one call is 12.2x cheaper and
+  10.0x faster than asking one at a time, with identical answers.</p>
+
+<pre><span class="lang">Python</span><code>response = client.system_one(
+    state=ticket,
+    questions={
+        "category": Choice(
+            instructions="Broad category of this ticket",
+            criteria={"bug_report": "Something is broken or erroring",
+                      "billing": "Charges, invoices, refunds",
+                      "feature_request": "Asking for new functionality",
+                      "account": "Login, permissions, security"}),
+        # Only meaningful if it IS a bug report. Ask anyway — it is nearly free.
+        "bug_severity": Score(
+            instructions="How severe is the reported issue",
+            criteria=["Cosmetic; no impact",
+                      "Degraded feature; workaround exists",
+                      "Blocking; no workaround"]),
+        "has_repro": Noul(instructions="The user describes steps to reproduce"),
+        # Only meaningful if it IS billing. Ask anyway.
+        "refund_wanted": Noul(
+            instructions="The user explicitly asks for a refund or credit"),
+    },
+)
+
+a = response.answers
+if a["category"].choice == "bug_report":
+    if a["bug_severity"].score &gt; 1.5 and a["has_repro"].noul &gt; 0.6:
+        escalate_to_engineering(ticket_id, severity="high")
+    else:
+        add_to_bug_backlog(ticket_id)
+elif a["category"].choice == "billing" and a["refund_wanted"].noul &gt; 0.7:
+    start_refund_flow(ticket_id)</code></pre>
+
+  <p>You are no longer designing a conversation. You are designing a query plan — and the branch
+  selection happens in your code, on data that is already local, with zero additional round trips.</p>
+
+  <p>Context works accordingly. <code>jev-1.13</code> allows 64k tokens for the state and all
+  questions combined, and 32k for the state plus the single longest question, because the state is
+  ingested once and the questions run against it.</p>
+
+  <h2>"Cannot hallucinate" is a claim about the output space</h2>
+
+  <p>This is the part that gets misread most often, so it is worth being precise.</p>
+
+  <p>TypeSafe's claim is not that Jev is never wrong. It is that Jev cannot return something
+  <i>outside the answer space you declared</i>. A Choice returns one of your keys. A Score returns a
+  number bounded by your levels. A Noul returns a float in [0, 1]. There is no code path that
+  produces a fabricated option, a malformed JSON object, or a key you did not define, because the
+  sampler is constrained to the space rather than being asked politely to stay inside it.</p>
+
+  <p>The company is refreshingly direct about the epistemics: schema matching is guaranteed, so the
+  0% type-error figure in their charts "is not empirical" — it is a structural property, and it
+  would be falsified by a single counter-example. The comparison numbers for LLMs, drawn from
+  OpenRouter traffic, they flag as carrying routing bias.</p>
+
+  <div class="callout">
+    <p>Why this matters more than it sounds: a hallucinated tool call in an interactive agent is an
+    annoyance a human notices and corrects. The same failure buried four layers deep in a dependency
+    chain, behind a latency guarantee, at three in the morning is an incident. Retry-and-validate
+    loops paper over it at the cost of exactly the tail latency you were trying to protect. Removing
+    the failure mode from the type system is categorically different from making it rarer.</p>
+  </div>
+
+  <p>What Jev can still be is wrong <i>within</i> the space — confidently routing a ticket to
+  <code>billing</code> when a person would have said <code>technical</code>. Which is why the second
+  half of the design exists.</p>
+
+  <h2>RLCD: calibration as an architectural primitive</h2>
+
+  <p>Ask a chat model for its confidence and you get a number that sounds like confidence. Models
+  optimised on human preference tend to be overconfident and inconsistent, because assertive text
+  reads better to a rater than hedged text. That failure is subtle and expensive: if a model can do
+  a task 95% of the time but cannot tell you when it is in the 5%, you cannot automate that task.
+  You are forced to review all of it, and the review cost eats the automation saving.</p>
+
+  <p>Jev is trained with Reinforcement Learning for Calibrated Decisions (RLCD), which optimises
+  probabilities against outcomes rather than against preference. The target is epistemic honesty:
+  higher confidence should genuinely mean higher accuracy, measured across groups of predictions.</p>
+
+  <p>Two caveats that the docs state plainly and that you should hold onto:</p>
+  <ul>
+    <li>Calibration is a <b>population property</b>. It does not promise any individual answer is right.</li>
+    <li><code>confidence</code> is a <b>derived statistic</b>, computed from the probability distribution
+    the answer already carries. Concentrated distribution, high confidence; flat distribution, low
+    confidence. You always get the raw <code>probabilities</code>, so if TypeSafe's definition is not
+    the measure you want, compute your own.</li>
+  </ul>
+
+  <p>A flat distribution is a diagnostic, not just a number. It usually means the options were not
+  distinguishable from the state you provided — which is more often a defect in your criteria than
+  confusion in the model.</p>
+
+  <h3>Thresholds are a risk decision, not a config value</h3>
+
+  <p>Once confidence is trustworthy in aggregate, it stops being telemetry and becomes control flow.
+  The pattern that follows is the one that actually changes your architecture: <b>one threshold per
+  action</b>, scaled to what being wrong costs, not one global threshold for the system.</p>
+
+<pre><span class="lang">Python</span><code>action = response.answers["action"]
+
+if action.confidence &lt; 0.5:
+    route_to_human(user_message)            # floor: the model says it does not know
+
+elif action.choice == "check_balance":
+    show_balance(account_id)                # read-only; wrong screen is recoverable
+
+elif action.choice == "approve_transfer":
+    if action.confidence &gt; 0.9:             # moves money; irreversible
+        confirm_then_execute(account_id)
+    else:
+        ask_user_to_confirm(account_id)
+
+else:
+    route_to_human(user_message)</code></pre>
+
+  <p>Note what has happened to the code review. Risk tolerance is no longer buried in a prompt that
+  a non-engineer edited last quarter. It is a numeric literal next to the action it guards, in a
+  file with a git history.</p>
+
+  <p>One operational note that follows directly: aliases move. <code>jev-latest</code> resolves to
+  <code>jev-1.13.0</code> today, and the answers behind an alias can change without a change on your
+  side. If you have tuned thresholds against a version, pin the version and move on your own
+  schedule.</p>
+
+<pre><span class="lang">Python</span><code>client = TypeSafeClient(model="jev-1.13.0")   # pin, don't drift</code></pre>
+
+  <h2>The numbers, and how much weight to put on them</h2>
+
+  <table class="rows">
+    <thead><tr><th></th><th>Jev (<code>jev-1.13</code>)</th><th>Frontier LLMs</th></tr></thead>
+    <tbody>
+      <tr><td>End-to-end latency</td><td>70–500ms</td><td>3–329s</td></tr>
+      <tr><td>Input price</td><td>$0.042 / MTok</td><td>$0.20–$10 / MTok</td></tr>
+      <tr><td>Output price</td><td>free</td><td>~5x input</td></tr>
+      <tr><td>Sampling</td><td>parallel, single pass</td><td>sequential, token by token</td></tr>
+      <tr><td>Structured-output errors</td><td>0% by construction</td><td>0.58%–45.5% (OpenRouter)</td></tr>
+      <tr><td>Rate limits</td><td>250k tokens/sec, 1,200 req/min</td><td>varies</td></tr>
+      <tr><td>Context</td><td>64k total; 32k state + longest question</td><td>varies</td></tr>
+    </tbody>
+  </table>
+
+  <p>TypeSafe's headline claims of 193.6x faster and 444.6x cheaper come from its own workflow
+  evaluations, in which every model is given the same compute graph and scored against the average
+  of two frontier models as a reference. The methodology is more honest than most launch benchmarks
+  — it evaluates models inside a workflow rather than on a leaderboard classification task, which is
+  the right unit of analysis — and the company lists the biases itself: the reference answers skew
+  toward the two vendors used as ground truth, and the workflows were authored by its own
+  capabilities team.</p>
+
+  <p>The correct engineering response is neither credulity nor dismissal. These are vendor-reported,
+  self-run, not yet independently reproduced. They are a strong reason to run a shadow evaluation on
+  your own traffic, and no reason at all to change a production threshold before you do.</p>
+
+  <h2>Where it breaks</h2>
+
+  <p>TypeSafe publishes a jaggedness page for <code>jev-1.13</code> — a documented list of its own
+  failure modes — which is a better signal about the team than any benchmark on the page. Read it
+  before your design review, not after your incident. The short version:</p>
+
+  <ul>
+    <li><b>It reads literally.</b> Jev answers the question you wrote, not the one you meant. Scoping
+    words, negations and implied conditions are taken at face value. The tell: when you look at a
+    wrong answer and find yourself explaining what you really meant, that explanation is the missing
+    half of your instruction.</li>
+    <li><b>It is not a calculator.</b> Counting, arithmetic, and comparing dates are all unreliable.
+    Dates are read as text, not as ordered quantities. Extract components with a Choice over
+    enumerated options — twelve months, thirty-one days — and do every comparison in code.</li>
+    <li><b>Numeric representations underperform semantic ones.</b> Questions about colour names beat
+    questions about hex values. Convert in code, then ask the judgement question.</li>
+    <li><b>Indirection costs accuracy.</b> A property of a property, or a double negative, is
+    measurably worse. Name the relevant part of the state directly.</li>
+    <li><b>Context rot is real.</b> Accuracy falls as the state fills with material the question does
+    not need. Retrieve and filter in code first; send only the fields the question uses.</li>
+    <li><b>State is not treated as hostile.</b> Adversarial content written to steer the
+    classification can move the answer. If you are classifying user-submitted text, that is a threat
+    model you own.</li>
+    <li><b>Structural invariants do not hold.</b> This one surprises people. Asking "is the customer
+    requesting a refund?" as a Noul and as a yes/no Choice returns numbers that are not
+    interchangeable, and a Noul and its negation do not sum to 1. A Choice is relative — which option
+    wins — while a Noul is absolute and can be low for every option. Do not carry a threshold tuned
+    on one primitive over to the other.</li>
+  </ul>
+
+  <p>Every one of these points the same direction: keep the deterministic work in code, and give the
+  model only the part that is genuinely a judgement. That is not a workaround. It is the programming
+  model.</p>
+
+  <h2>Four use cases, with code</h2>
+
+  <h3>1. Support triage as a cascade</h3>
+
+  <p>The highest-value pattern is not replacing your LLM. It is deciding which requests deserve one.
+  LangChain's write-up frames Jev as a component of the agent loop rather than a competitor to it,
+  and the shape below is why.</p>
+
+<pre><span class="lang">Python</span><code>def handle(message):
+    r = client.system_one(
+        state=message,
+        questions={
+            "intent": Choice(
+                instructions="Primary intent of this message",
+                criteria={"order_status": "Asking about an existing order",
+                          "product_question": "Asking about a product",
+                          "return_exchange": "Wants to return or exchange",
+                          "complaint": "Unhappy, wants resolution"}),
+            "complexity": Score(
+                instructions="How complex is this to resolve",
+                criteria=["Simple lookup or standard procedure",
+                          "Requires judgment or multiple steps",
+                          "Unusual edge case, escalation needed"]),
+        },
+    )
+    intent, complexity = r.answers["intent"], r.answers["complexity"]
+
+    if intent.confidence &lt; 0.5:
+        return route_to_human(message)
+
+    if intent.choice == "order_status":
+        return lookup_order(message)                 # no model in this path at all
+    if intent.choice == "product_question":
+        return handle_with_llm(message, PRODUCT_SPECIALIST)
+    if intent.choice == "return_exchange":
+        return handle_with_llm(message, RETURNS_SPECIALIST)
+    if intent.choice == "complaint":
+        if complexity.score &gt; 1 or complexity.confidence &lt; 0.5:
+            return route_to_human(message)
+        return handle_with_llm(message, COMPLAINT_RESOLUTION)</code></pre>
+
+  <p><b>The business case.</b> One branch never touches a model. Two load different specialists, which
+  is also a quality win — a narrow prompt beats a general one. One escalates honestly rather than
+  guessing. Using TypeSafe's per-case figures, a million tickets through this shape costs roughly
+  $6,480 against $30,400 for routing everything through a frontier model, with around 800,000 of
+  them answered in under half a second instead of ten.</p>
+
+  <p>The saving is real but it is the second-order benefit. The first-order benefit is that the
+  escalation path is now driven by a calibrated number instead of a heuristic, so the tickets a human
+  sees are the ones a human is actually needed for.</p>
+
+  <h3>2. Retrieve, then judge — document and claims processing</h3>
+
+  <p>Jev knows nothing beyond the state you hand it. Read that together with context rot and the
+  consequence is sharp: whatever assembles the state decides what the model is allowed to know. Pad
+  it and you lose accuracy; ground it in a weak source and you get a beautifully calibrated judgement
+  about bad material.</p>
+
+  <p>So the pattern is two layers: fetch precisely in code, then judge cheaply per item.</p>
+
+<pre><span class="lang">Python</span><code>shortlist = []
+for doc in retrieve(query, max_results=200):          # your search, your filters, in code
+    verdict = client.system_one(
+        state={"title": doc.title, "source": doc.url, "content": doc.content},
+        questions={
+            "is_relevant": Noul(
+                instructions="This document addresses the question under review"),
+            "has_signed_date": Noul(
+                instructions="The document contains an explicit signature date"),
+            "evidence_strength": Score(
+                instructions="How strong is the evidence presented",
+                criteria=["Anecdotal or indirect",
+                          "Circumstantial",
+                          "Direct, single source",
+                          "Direct, corroborated by multiple sources"]),
+        },
+    )
+    a = verdict.answers
+    if a["is_relevant"].noul &gt; 0.7 and a["evidence_strength"].score &gt; 1.5:
+        shortlist.append((doc, a["evidence_strength"].confidence))</code></pre>
+
+  <p>At $0.042/MTok with free output, a per-item relevance filter costs less than the context window
+  it saves downstream. This is the generalisable insight for anyone running RAG: a Noul per passage is
+  cheaper than the tokens you would spend feeding that passage to a frontier model to find out it was
+  irrelevant.</p>
+
+  <p>The same shape covers insurance claims intake, KYC document review, contract clause flagging, and
+  literature screening. In each, the expensive resource is human attention, and what you are buying is
+  a defensible, logged, confidence-scored shortlist rather than a pile.</p>
+
+  <h3>3. Agent guardrails and tool-call gating</h3>
+
+  <p>Coding harnesses have shipped some form of "is this action dangerous?" classifier for a while,
+  but it has generally lived in the closed part of the harness because a per-action LLM call is too
+  slow and too expensive to sit in front of every tool invocation.</p>
+
+  <p>At 70–500ms and free output tokens, that constraint lifts. LangChain has already shipped
+  middleware on this idea:</p>
+
+<pre><span class="lang">Python</span><code>from langchain.agents import create_agent
+from langchain_typesafe.experimental.middleware import AutoModeMiddleware
+
+guardrail = AutoModeMiddleware(tools=["bash"])
+agent = create_agent("openai:gpt-5.6-luna", middleware=[guardrail])</code></pre>
+
+  <p>Rolling your own gives you the thresholds:</p>
+
+<pre><span class="lang">Python</span><code>def gate(tool_name: str, args: dict, task_context: str) -&gt; str:
+    r = client.system_one(
+        state={"tool": tool_name, "arguments": args, "task": task_context},
+        questions={
+            "destructive": Noul(
+                instructions="This call deletes, overwrites or irreversibly modifies data"),
+            "exfiltrates": Noul(
+                instructions="This call sends data to a destination outside the system"),
+            "off_task": Noul(
+                instructions="This call is unrelated to the stated task"),
+            "blast_radius": Score(
+                instructions="How much is affected if this call is wrong",
+                criteria=["A single scratch file",
+                          "One project directory",
+                          "A shared environment or production system"]),
+        },
+    )
+    a = r.answers
+    if a["exfiltrates"].noul &gt; 0.5 or a["blast_radius"].score &gt; 1.5:
+        return "require_human_approval"
+    if a["destructive"].noul &gt; 0.6 or a["off_task"].noul &gt; 0.7:
+        return "confirm"
+    return "allow"</code></pre>
+
+  <p>Four independent judgements, one round trip, a fraction of a cent, inside the latency budget of
+  the tool call it guards. Note the deliberate use of four separate Nouls rather than one "is this
+  safe?" question — composite judgements hide several decisions inside one number, and the jaggedness
+  guidance is explicit that each question should ask one thing.</p>
+
+  <div class="callout">
+    <p>One caution, straight from the docs: state is not treated as hostile by default. A guardrail
+    classifier is exactly the surface an attacker will target with adversarial content. Write precise
+    criteria, test edge cases, and treat this as defence in depth rather than a perimeter.</p>
+  </div>
+
+  <h3>4. Real-time scoring in the request path</h3>
+
+  <p>The third use case class is the one that did not previously exist: AI inside a user-facing
+  request, where a three-second model call was never an option.</p>
+
+  <p>Lead scoring at form submission. Fraud pre-screening at checkout. Content moderation before a
+  post renders. Dynamic routing in an IVR. In each case the latency budget is a few hundred
+  milliseconds end to end, and the old answer was a gradient-boosted model on hand-engineered
+  features that took a quarter to build and goes stale quietly.</p>
+
+  <p>The composite-scoring pattern fits this well, because it keeps the weights in your code:</p>
+
+<pre><span class="lang">Python</span><code>r = client.system_one(
+    state=lead_payload,
+    questions={
+        "budget_signal": Score(
+            instructions="How strongly does this indicate real budget",
+            criteria=["No indication", "Vague interest", "Named budget or timeline",
+                      "Procurement process already underway"]),
+        "seniority": Score(
+            instructions="Seniority of the person enquiring",
+            criteria=["Individual contributor", "Team lead", "Director",
+                      "VP or above"]),
+        "fit": Score(
+            instructions="Fit with a mid-market B2B software buyer",
+            criteria=["Poor fit", "Adjacent", "Good fit", "Ideal customer profile"]),
+        "is_spam": Noul(instructions="This submission is spam or automated"),
+    },
+)
+
+a = r.answers
+if a["is_spam"].noul &gt; 0.8:
+    drop(lead)
+else:
+    score = (0.45 * a["budget_signal"].score / 3
+             + 0.25 * a["seniority"].score / 3
+             + 0.30 * a["fit"].score / 3)
+    route(lead, tier="A" if score &gt; 0.66 else "B" if score &gt; 0.4 else "nurture")</code></pre>
+
+  <p>Re-weighting is now a code change with a diff and a test, not a prompt rewrite whose effects you
+  cannot bound. You can A/B it. You can roll it back. Your growth team can read it.</p>
+
+  <h2>How to pilot this without betting anything</h2>
+
+  <p>A sober adoption path, in the order we would run it:</p>
+  <ol>
+    <li><b>Pick one decision.</b> High volume, low stakes, currently made by either an LLM call or a
+    regex-and-hope rule. Ticket categorisation and RAG passage filtering are the usual first wins.</li>
+    <li><b>Shadow it.</b> Run Jev alongside the incumbent. Log both answers, plus Jev's confidence, and
+    change no behaviour at all for a week or two.</li>
+    <li><b>Build the calibration curve.</b> Bucket by confidence, measure accuracy per bucket on your
+    own labelled data. This is the deliverable. It tells you where your automation threshold goes, and
+    it is the artefact that gets you sign-off from whoever owns the risk.</li>
+    <li><b>Automate the top band only.</b> Leave everything else on the existing path. Expand the band
+    as the evidence supports it, not as the enthusiasm does.</li>
+    <li><b>Pin the version</b> once thresholds are tuned, and re-run the curve before moving.</li>
+    <li><b>Keep the arithmetic in code.</b> Every time you are tempted to ask the model to count,
+    compare dates, or compute a magnitude, that is the jaggedness page telling you where the bug will
+    be.</li>
+  </ol>
+
+  <p>Two things worth flagging honestly. Jev is in early access with a waitlist, and TypeSafe says
+  rate limits are adjusting dynamically while it serves launch demand, which is a real dependency
+  consideration for anything production-bound. And the entire body of published evidence is a week old
+  and largely self-reported, including the launch-week demos. That is not a reason to ignore it. It is
+  a reason for step 2 to be longer than you would like.</p>
+
+  <h2>Why this is more interesting than another model release</h2>
+
+  <p>Strip away the numbers and the argument underneath is architectural, and it is one we have been
+  making to clients for a while in different words: most of the decisions inside software are System 1
+  judgements, and we have been renting System 2 to make them.</p>
+
+  <p>"Which bucket is this?" "Is this urgent?" "Does this passage matter?" These are not reasoning
+  problems. They were only ever routed through a chat model because a chat model was the only thing
+  available that understood language at all. The cost of that mismatch has been paid in latency
+  budgets, in retry loops, in review queues, and in the pile of AI pilots that worked in the demo and
+  never made it into the request path.</p>
+
+  <p>Jev is one vendor's early-access bet on that thesis, with numbers that need independent
+  verification. The thesis itself looks durable regardless of whether this particular model is the one
+  that wins: the interface between AI and software should be a typed function call with an honest
+  probability attached, not a string you hope parses.</p>
+
+  <p>The naming is a tell, incidentally. Jev is named for William Stanley Jevons, whose paradox
+  observed that making coal-fired engines more efficient increased coal consumption rather than
+  reducing it. TypeSafe expects the same of machine intelligence: every order-of-magnitude fall in the
+  cost of a decision unlocks orders of magnitude more decisions worth making. If they are right, the
+  interesting question is not what you can make cheaper. It is which decisions you never automated
+  because, until now, each one cost a tenth of a cent and three seconds too many.</p>
+
+  <h2>Frequently asked questions</h2>
+
+  <details class="faq">
+    <summary>What is a System One model?</summary>
+    <p>A System One model is a class of AI model that evaluates a state and returns typed answers with
+    calibrated probabilities, rather than generating text. TypeSafe named the class after Daniel
+    Kahneman's System 1 — fast, intuitive judgement — as distinct from the slow, deliberate System 2
+    reasoning that chat and reasoning models perform. Jev is TypeSafe's first System One model,
+    released in early access on 15 September 2026.</p>
+  </details>
+
+  <details class="faq">
+    <summary>How is Jev different from an LLM with structured outputs?</summary>
+    <p>Three differences matter. First, sampling: an LLM generates tokens one at a time, each
+    conditioned on the last, while Jev evaluates every question in a request in parallel in a single
+    pass. Second, the output space: an LLM emits a string that must be parsed and validated, and can
+    fail that validation, whereas Jev's answer space is defined in advance so schema mismatch is
+    impossible by construction rather than by retry. Third, training: Jev is trained with Reinforcement
+    Learning for Calibrated Decisions, which optimises its probabilities against outcomes, so its
+    confidence numbers are meaningful in aggregate rather than a number the model was asked to guess
+    about itself.</p>
+  </details>
+
+  <details class="faq">
+    <summary>What can Jev not do?</summary>
+    <p>It cannot generate text, code or explanations, and it has no knowledge of the world beyond the
+    state you hand it — it cannot look anything up. TypeSafe's own jaggedness page for
+    <code>jev-1.13</code> also documents that it is unreliable at counting, arithmetic, date comparison
+    and numeric representations such as hex colour values, that it reads instructions literally rather
+    than inferring intent, and that accuracy falls as the state fills with material the question does
+    not need. Text only: no image, audio or video input.</p>
+  </details>
+
+  <details class="faq">
+    <summary>What does Jev cost, and how fast is it?</summary>
+    <p>TypeSafe prices <code>jev-1.13</code> at $0.042 per million input tokens — $42 per billion —
+    with output tokens free, and reports end-to-end response times of 70 to 500 milliseconds against 3
+    to 329 seconds for frontier models on comparable queries. The company's headline figures of 193.6x
+    faster and 444.6x cheaper come from its own workflow evaluations. These are vendor-reported
+    numbers, self-run and not yet independently reproduced, so treat them as a reason to benchmark
+    rather than as a benchmark.</p>
+  </details>
+
+  <details class="faq">
+    <summary>Should Jev replace the LLM in our stack?</summary>
+    <p>No, and TypeSafe does not claim it should. Jev has no generative capability at all, so anything
+    that has to produce prose, code or a customer-facing reply still needs a generative model. The
+    productive framing is a cascade: Jev makes the fast, structured decision about what should happen
+    next — which bucket, how severe, whether to escalate — and a generative model is invoked only on
+    the branches that genuinely need one. The saving comes from the calls you stop making, not from
+    swapping one model for another.</p>
+  </details>
+
+  <details class="faq">
+    <summary>How do we pilot it responsibly?</summary>
+    <p>Pick one high-volume, low-stakes decision you already make with an LLM or a brittle rule, and
+    shadow it: run Jev alongside the incumbent, log both answers plus Jev's confidence, and change no
+    behaviour for a week or two. That gives you a calibration curve on your own data — accuracy
+    bucketed by confidence — which is the only thing that tells you where to set your automation
+    threshold. Then automate the high-confidence band, route the rest as you do today, and expand the
+    band as the evidence supports it.</p>
+  </details>
+
+  <div class="panel" style="margin-top:30px">
+    <h2 style="margin:0 0 10px; padding:0; border:0; font-size:14px">See the patterns run</h2>
+    <p class="note" style="margin:0">The four use cases above are the same shapes animated in the
+    <a href="index.html">six simulations</a>, each matching runnable Python in <code>cookbooks/</code>.</p>
+  </div>
+
+  <p class="sources">Sources: TypeSafe's launch post, <i>Introducing System One Models and Jev</i>;
+  the TypeSafe documentation, including the confidence, models and <code>jev-1.13</code> jaggedness
+  pages; and LangChain's <i>Building a Harness with Jev</i>. Performance and pricing figures are
+  TypeSafe's own, published on 15 September 2026 and not independently reproduced at the time of
+  writing. Article originally published at
+  <a href="https://www.exponenlabs.tech/pulse/jev-system-one-models-for-engineers">exponenlabs.tech/pulse</a>.</p>
+</div>
+</body>
+</html>

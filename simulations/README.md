@@ -5,6 +5,10 @@ colleague can see what the pattern does without reading Python.
 
 **[▶ Open the live demos](https://exponen-agi.github.io/jev-playground/)**
 
+Background reading: [Jev and System One models — a working engineer's guide](https://exponen-agi.github.io/jev-playground/article-jev-system-one.html)
+(`simulations/article-jev-system-one.html`), the article these patterns come from. It is linked
+from the landing page, beside the GitHub link.
+
 [![Lead scoring simulation: four weighted factor bars combining into a composite score and a sales tier](../docs/lead-scoring.png)](https://exponen-agi.github.io/jev-playground/05-lead-scoring.html)
 
 <sub>Simulation 05 — drag a weight and every lead scored so far re-sorts.</sub>
