@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A Month Of Transactions</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%278%27 fill=%27%23d63c9e%27/%3E%3Cpath d=%27M20 8v11a5 5 0 0 1-9 3%27 stroke=%27white%27 stroke-width=%273%27 fill=%27none%27 stroke-linecap=%27round%27/%3E%3C/svg%3E">
+<link rel="stylesheet" href="assets/sim.css">
+<style>
+  .sheet { max-height: 330px; overflow-y: auto; }
+  .band { display: grid; grid-template-columns: 74px 1fr 52px; gap: 10px; align-items: center;
+          margin: 8px 0; font-size: 12.5px; }
+  .band .lab { font-family: var(--mono); font-size: 11.5px; color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="index.html">← all simulations</a>
+  <div class="top"><span class="eyebrow">Cookbook 10</span>
+    <span class="top-links">
+      <a class="repo-link" href="https://github.com/exponen-agi/jev-playground/blob/main/cookbooks/10_bookkeeping.py"
+         aria-label="View the Python source for cookbook 10 on GitHub">
+        <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M4.72 3.22a.75.75 0 0 1 1.06 1.06L2.06 8l3.72 3.72a.75.75 0 1 1-1.06 1.06L.47 8.53a.75.75 0 0 1 0-1.06l4.25-4.25Zm6.56 0a.75.75 0 1 0-1.06 1.06L13.94 8l-3.72 3.72a.75.75 0 1 0 1.06 1.06l4.25-4.25a.75.75 0 0 0 0-1.06l-4.25-4.25Z"></path></svg><span class="label">The Python</span> <span class="mono">10_bookkeeping.py</span>
+      </a>
+    </span>
+  </div>
+  <h1>A month of transactions</h1>
+  <p class="lede">This is the one where calibration stops being a talking point. What matters is not
+  how often the model is right — it is whether it <b>knows which rows it is unsure about</b>. If it
+  does, the bookkeeper reads sixty rows instead of eight hundred, and the eight hundred are not a
+  leap of faith. <b>Drag the floor</b> and watch both numbers move.</p>
+
+  <div class="panel">
+    <div class="controls">
+      <button id="play" class="primary">▶  Play</button>
+      <button id="step">Next row</button>
+      <button id="reset">Reset</button>
+      <div class="spacer"></div>
+      <label class="ctl">Speed <input id="speed" type="range" min="0.5" max="4" step="0.5" value="1"></label>
+    </div>
+    <div class="sheet">
+      <table class="rows"><thead><tr><th>Date</th><th>What the bank says</th><th>Amount</th>
+        <th>Filed as</th><th>Sure</th><th></th></tr></thead>
+      <tbody id="sheet"><tr><td colspan="6" class="note" style="border:0">Press <b>Play</b>.</td></tr></tbody></table>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="panel">
+      <h2>The floor <span class="sub">— set it from the table on the right, not from taste</span></h2>
+      <label class="ctl" style="display:block">
+        <div style="display:flex;justify-content:space-between;color:var(--ink);font-size:13px">
+          <span>File without a human above</span><span class="tick" id="floorv">0.85</span>
+        </div>
+        <input id="floor" type="range" min="0.5" max="0.98" step="0.01" value="0.85" style="width:100%;margin-top:4px">
+      </label>
+      <div class="stats" style="margin-top:14px">
+        <div class="stat" data-stat="rows"><div class="k">Rows</div><div class="v">0</div><div class="n">on the statement</div></div>
+        <div class="stat" data-stat="filed"><div class="k">Filed</div><div class="v">0</div><div class="n">nobody read them</div></div>
+        <div class="stat" data-stat="queue"><div class="k">Review queue</div><div class="v">0</div><div class="n">the bookkeeper’s morning</div></div>
+        <div class="stat" data-stat="acc"><div class="k">Filed correctly</div><div class="v">—</div><div class="n">vs. the human ledger</div></div>
+      </div>
+      <p class="note" id="tradeoff"></p>
+    </div>
+
+    <div class="panel">
+      <h2>Is the confidence number load-bearing? <span class="sub">— last year’s ledger, re-run</span></h2>
+      <div id="bands"></div>
+      <p class="note">Take a few hundred rows you already categorised by hand, run them through, and
+      bucket the results by the confidence that came back. <b>Accuracy climbing with confidence</b> is
+      what makes a floor meaningful. A flat table means the number is decoration and nothing should be
+      filed automatically — which is a thing you can find out in an afternoon, before you trust it
+      with anything.</p>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { $, Ticker, wireControls, setStat, dur } from "./assets/sim.js";
+
+// Illustrative. `ok` is whether the category matched what the bookkeeper filed by hand
+// last year — which is how the calibration table below is built.
+const ROWS = [
+  { d: "09-02", t: "BOOKER WHOLESALE 4471",    a: -612.40, c: "cogs_stock",     f: .97, ok: 1, biz: .99, hum: .04 },
+  { d: "09-02", t: "STRIPE PAYOUT 88213",      a: 4820.15, c: "sales_income",   f: .98, ok: 1, biz: .99, hum: .03 },
+  { d: "09-03", t: "GOOGLE *GSUITE_piercafe",  a: -28.80,  c: "software",       f: .96, ok: 1, biz: .97, hum: .02 },
+  { d: "09-03", t: "NORTHBRIDGE BANK CHARGES", a: -12.50,  c: "professional",   f: .95, ok: 1, biz: .98, hum: .02 },
+  { d: "09-04", t: "TESCO STORES 3411",        a: -74.22,  c: "cogs_stock",     f: .61, ok: 0, biz: .44, hum: .38 },
+  { d: "09-05", t: "SQ *COASTAL COLD CHAIN",   a: -295.00, c: "repairs",        f: .93, ok: 1, biz: .98, hum: .05 },
+  { d: "09-05", t: "BRITISH GAS BUSINESS",     a: -188.40, c: "rent_utilities", f: .97, ok: 1, biz: .99, hum: .02 },
+  { d: "09-08", t: "CASH WITHDRAWAL ATM",      a: -200.00, c: "owner_drawings", f: .66, ok: 1, biz: .31, hum: .77 },
+  { d: "09-09", t: "AMZN MKTP UK*2H41J9",      a: -139.99, c: "equipment",      f: .85, ok: 1, biz: .81, hum: .44 },
+  { d: "09-10", t: "FACEBK *ADS 4471X",        a: -240.00, c: "marketing",      f: .94, ok: 1, biz: .97, hum: .03 },
+  { d: "09-11", t: "SHELL FORECOURT A38",      a: -68.40,  c: "travel",         f: .87, ok: 1, biz: .84, hum: .22 },
+  { d: "09-12", t: "PAYPAL *J HUTTON",         a: -450.00, c: "wages",          f: .71, ok: 0, biz: .79, hum: .68 },
+  { d: "09-14", t: "STRIPE PAYOUT 88407",      a: 3915.60, c: "sales_income",   f: .98, ok: 1, biz: .99, hum: .02 },
+  { d: "09-15", t: "TRANSFER TO SAVINGS 8871", a: -1000.00, c: "transfer",      f: .88, ok: 1, biz: .95, hum: .09 },
+  { d: "09-16", t: "SCREWFIX 2201",            a: -83.10,  c: "repairs",        f: .78, ok: 1, biz: .92, hum: .18 },
+  { d: "09-18", t: "ADOBE *CREATIVE CLD",      a: -49.94,  c: "software",       f: .96, ok: 1, biz: .95, hum: .03 },
+  { d: "09-19", t: "J. MORRIS",                a: -1250.00, c: "professional",  f: .44, ok: 0, biz: .63, hum: .84 },
+  { d: "09-22", t: "BOOKER WHOLESALE 4488",    a: -540.05, c: "cogs_stock",     f: .97, ok: 1, biz: .99, hum: .04 },
+  { d: "09-24", t: "UBER *TRIP HELP.UBER",     a: -22.40,  c: "travel",         f: .83, ok: 0, biz: .58, hum: .31 },
+  { d: "09-26", t: "WWW.SUMUP *REFUND",        a: -39.00,  c: "sales_income",   f: .75, ok: 1, biz: .88, hum: .29 },
+];
+
+const PERSONAL_FLOOR = .30, REVIEW_ANYWAY = .50;
+let floor = .85, i = 0, seen = [];
+
+function decide(r) {
+  if (r.biz < PERSONAL_FLOOR) return { k: "drawings", label: "owner’s drawings", colour: "--muted" };
+  if (r.hum > REVIEW_ANYWAY)  return { k: "queue", label: "review — flagged", colour: "--human" };
+  if (r.f < floor)            return { k: "queue", label: "review — unsure", colour: "--human" };
+  return { k: "filed", label: r.c, colour: "--code" };
+}
+
+function tick() {
+  if (i >= ROWS.length) { ticker.pause(); return; }
+  i++; seen = ROWS.slice(0, i);
+  repaint();
+  const last = $("#sheet").lastElementChild;
+  if (last && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    last.animate([{ opacity: 0 }, { opacity: 1 }], { duration: dur(260) });
+  }
+}
+
+function repaint() {
+  $("#sheet").innerHTML = seen.length ? seen.map((r) => {
+    const v = decide(r);
+    return `<tr><td class="tick">${r.d}</td>
+      <td class="mono" style="font-size:11.5px">${r.t}</td>
+      <td class="tick" style="color:${r.a > 0 ? "var(--code)" : "var(--ink)"}">${r.a.toFixed(2)}</td>
+      <td><span class="pill" style="color:var(${v.colour});border-color:var(${v.colour})">${v.label}</span></td>
+      <td class="tick">${r.f.toFixed(2)}</td>
+      <td class="tick" style="color:var(--muted)">${v.k === "filed" && !r.ok ? "⚠" : ""}</td></tr>`;
+  }).join("") : `<tr><td colspan="6" class="note" style="border:0">Press <b>Play</b>.</td></tr>`;
+
+  const filed = seen.filter((r) => decide(r).k === "filed");
+  const queue = seen.filter((r) => decide(r).k === "queue");
+  const wrong = filed.filter((r) => !r.ok).length;
+
+  setStat("rows", seen.length);
+  setStat("filed", filed.length);
+  setStat("queue", queue.length);
+  setStat("acc", filed.length ? ((filed.length - wrong) / filed.length * 100).toFixed(0) + "%" : "—",
+          filed.length ? `${wrong} wrong of ${filed.length}` : "vs. the human ledger");
+
+  $("#tradeoff").innerHTML = !seen.length
+    ? "Press <b>Play</b> to start the month."
+    : `At a floor of <b>${floor.toFixed(2)}</b>, a person reads
+       <b>${queue.length} of ${seen.length}</b> rows${wrong ? `, and <b style="color:var(--danger)">${wrong}</b> wrongly-filed row${wrong > 1 ? "s" : ""} got through (marked ⚠)` : ", and nothing wrongly filed got through"}.
+       Lower it and the queue shrinks while mistakes leak; raise it and the bookkeeper reads more.
+       That trade is now a number in a file, which is the only honest place for it.`;
+
+  // Confidence bands over everything seen so far — the cookbook's calibration_report().
+  const bands = [[.9, 1.01], [.8, .9], [.7, .8], [.6, .7], [.3, .6]];
+  $("#bands").innerHTML = bands.map(([lo, hi]) => {
+    const rows = seen.filter((r) => r.f >= lo && r.f < hi);
+    const acc = rows.length ? rows.filter((r) => r.ok).length / rows.length : null;
+    return `<div class="band">
+      <span class="lab">${lo.toFixed(1)}–${hi > 1 ? "1.0" : hi.toFixed(1)}</span>
+      <div class="bar" style="height:9px"><span style="width:${acc === null ? 0 : acc * 100}%;
+        background:var(${acc === null ? "--line" : acc > .9 ? "--code" : acc > .6 ? "--human" : "--danger"})"></span></div>
+      <span class="tick" style="text-align:right">${acc === null ? "—" : (acc * 100).toFixed(0) + "%"}
+        <span style="color:var(--muted)">${rows.length ? "·" + rows.length : ""}</span></span>
+    </div>`;
+  }).join("");
+}
+
+const ticker = new Ticker(tick, 900);
+wireControls({
+  ticker, playBtn: $("#play"), stepBtn: $("#step"), resetBtn: $("#reset"), speedInput: $("#speed"),
+  onReset() { i = 0; seen = []; repaint(); },
+});
+
+$("#floor").addEventListener("input", (e) => {
+  floor = +e.target.value;
+  $("#floorv").textContent = floor.toFixed(2);
+  repaint();
+});
+
+repaint();
+</script>
+</body>
+</html>

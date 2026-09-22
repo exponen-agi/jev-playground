@@ -1,7 +1,8 @@
 # Simulations
 
-Animated, interactive versions of the six [cookbooks](../cookbooks) — built so a non-technical
-colleague can see what the pattern does without reading Python.
+Animated, interactive versions of the ten [cookbooks](../cookbooks) — built so a non-technical
+colleague can see what the pattern does without reading Python. Every page carries a link to the
+Python it is built from, in its header.
 
 **[▶ Open the live demos](https://exponen-agi.github.io/jev-playground/)**
 
@@ -46,24 +47,47 @@ third-party proxy, so do not rely on it for anything you are sharing widely.
 > No AI is called. These are animations of the patterns with illustrative numbers, so the
 > *shape* is legible. They are not measurements.
 
+The landing page groups them by what the business is actually doing, not by cookbook number.
+
+**Customer conversations**
+
 | | Page | Try |
 |---|---|---|
 | 01 | [Support triage cascade](./01-triage-cascade.html) | Drag the confidence floor and watch tickets move between the automated and human paths |
+| 07 | [The shared inbox](./07-inbox-triage.html) | Raise the floor and watch the owner's pile grow — labelled *unsure*, not misfiled |
+| 04 | [The second pair of eyes](./04-output-verifier.html) | Step through four drafts as six checks resolve |
+
+**Sales and orders**
+
+| | Page | Try |
+|---|---|---|
+| 05 | [Scoring while they wait](./05-lead-scoring.html) | Re-weight the formula and watch every lead re-sort live |
+| 08 | [Orders by WhatsApp](./08-order-intake.html) | Watch what the model judged and what the regex parsed, side by side |
+
+**Money and paperwork**
+
+| | Page | Try |
+|---|---|---|
+| 09 | [The bill that just arrived](./09-invoice-intake.html) | Drag the approval limit; watch a changed-bank-details invoice get held regardless |
+| 10 | [A month of transactions](./10-bookkeeping.html) | Move the floor and watch both the queue size *and* the accuracy of what was filed |
+
+**Around the models you already run**
+
+| | Page | Try |
+|---|---|---|
 | 02 | [The gatekeeper](./02-rag-gatekeeper.html) | Raise the relevance bar; watch a prompt-injection document get quarantined |
 | 03 | [The checkpoint](./03-agent-guardrails.html) | Move each hazard threshold independently and watch verdicts flip |
-| 04 | [The second pair of eyes](./04-output-verifier.html) | Step through four drafts as six checks resolve |
-| 05 | [Scoring while they wait](./05-lead-scoring.html) | Re-weight the formula and watch every lead re-sort live |
 | 06 | [Picking the right brain](./06-model-router.html) | Watch requests fan out across no-model, small, reasoning and human paths |
 
 Every page has **Play**, **Step**, **Reset** and a speed control, plus at least one threshold
-you can drag — because the point of all six is that the thresholds live in your code, where
+you can drag — because the point of all ten is that the thresholds live in your code, where
 they have a diff and a revert.
 
 ## Files
 
 ```
-index.html            landing page
-0*-*.html             one self-contained page per cookbook
+index.html            landing page, cards grouped by domain
+0*-*.html, 10-*.html  one self-contained page per cookbook
 assets/sim.css        shared design tokens, light and dark
 assets/sim.js         play/pause loop, stat helpers, deterministic RNG
 assets/d3-mini.js     d3-selection + d3-transition + d3-ease (37 KB, vendored)

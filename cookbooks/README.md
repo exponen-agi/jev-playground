@@ -1,6 +1,8 @@
 # Cookbooks
 
-Six real-life patterns for using Jev *with* the models you already run — not instead of them.
+Ten real-life patterns for using Jev *with* the models you already run — not instead of them.
+The first six sit around a frontier model. The last four are the sorting work a small
+business is currently doing by hand, every day.
 
 Every script is runnable as-is against its built-in sample inputs, and marks the boundary
 between the Jev part and the frontier-model part. The Jev half runs with only
@@ -18,7 +20,9 @@ python 01_triage_cascade.py
 
 ---
 
-## The six
+## The ten
+
+### Around the models you already run
 
 | # | Pattern | Jev's job | The LLM's job | Needs |
 |---|---|---|---|---|
@@ -28,6 +32,26 @@ python 01_triage_cascade.py
 | **[04](./04_output_verifier.py)** · [▶](../simulations/04-output-verifier.html) | **LLM output verifier** | Judge the draft for grounding, invention, promises, hedging, and tone | Generate the draft, and revise it on style failures | `OPENAI` or `ANTHROPIC` |
 | **[05](./05_realtime_lead_scoring.py)** · [▶](../simulations/05-lead-scoring.html) | **Real-time scoring** | Four weighted scores + spam + territory, inside a form-submit request | Write the first-touch email — tier A only | `OPENAI` or `ANTHROPIC` |
 | **[06](./06_model_router.py)** · [▶](../simulations/06-model-router.html) | **Cross-provider router** | Decide what the request *needs*, then pick the tier | Whichever of GPT / Claude / Gemini the axes selected | any / all |
+
+### Work a small business is doing by hand today
+
+| # | Pattern | Jev's job | The LLM's job | Needs |
+|---|---|---|---|---|
+| **[07](./07_inbox_triage.py)** · [▶](../simulations/07-inbox-triage.html) | **The shared inbox** | Six judgements on every message: what it is, whose desk, how urgent, does it need a person | Draft the first reply — on the one branch where a stranger is asking to buy something | `ANTHROPIC` or `OPENAI` |
+| **[08](./08_order_intake.py)** · [▶](../simulations/08-order-intake.html) | **Orders by WhatsApp** | What the message is doing, which catalogue line, whether a quantity is *stated* | Ask one short, human-sounding question when something is missing | `OPENAI` or `ANTHROPIC` |
+| **[09](./09_invoice_intake.py)** · [▶](../simulations/09-invoice-intake.html) | **Bills and invoices** | Document type, which open order it matches, completeness, and whether the payee just changed | Write the chase email — only when a field is missing | `ANTHROPIC` or `OPENAI` |
+| **[10](./10_bookkeeping.py)** · [▶](../simulations/10-bookkeeping.html) | **Bank transactions** | Category, business-or-personal, receipt needed, and whether a human should look | One month-end note about the flagged rows. Once a month, not once a row | `OPENAI` or `ANTHROPIC` |
+
+Three things worth stealing from this second group:
+
+- **07** shows a confidence floor used as a delegation rule rather than a quality metric:
+  everything below it lands in one honestly-labelled pile instead of a plausible wrong folder.
+- **08** draws the line between the model and the parser. Jev has three primitives and none of
+  them is "extract a number", so it judges whether a quantity is present and a regex reads it.
+  When the two disagree, that disagreement is the signal.
+- **10** ships `calibration_report()` — run last year's hand-categorised ledger through and bucket
+  the results by reported confidence. Accuracy climbing with confidence is what makes a floor
+  mean anything. A flat table means it does not, and you should automate none of it.
 
 ---
 
