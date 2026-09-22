@@ -1,18 +1,59 @@
+<div align="center">
+
 # jev-playground
 
 **A working engineer's playground for Jev — TypeSafe's System One model.**
 
-Runnable code samples, diagrams, and cookbooks for the thing Jev is actually good at:
-making a *lot* of small, typed, calibrated decisions fast — including inside systems
-you already built around OpenAI, Claude, or Gemini.
+Runnable cookbooks, a plain-English guide, and six interactive simulations of what a
+fast, calibrated, *typed* decision model changes about your architecture — including
+inside systems you already built around OpenAI, Claude, or Gemini.
 
-> Everything here is written for someone who has to put this in a request path, not
-> someone evaluating a demo.
+[![Live demos](https://img.shields.io/badge/%E2%96%B6%20Live%20demos-open%20in%20browser-d63c9e?style=for-the-badge)](https://exponen-agi.github.io/jev-playground/)
+[![Deploy simulations to Pages](https://github.com/exponen-agi/jev-playground/actions/workflows/pages.yml/badge.svg)](https://github.com/exponen-agi/jev-playground/actions/workflows/pages.yml)
+[![No API key needed](https://img.shields.io/badge/demos-no%20API%20key%20needed-0d9e70)](https://exponen-agi.github.io/jev-playground/)
+
+[**▶ Live demos**](https://exponen-agi.github.io/jev-playground/) ·
+[Cookbooks](./cookbooks) ·
+[The guide](#the-one-paragraph-version) ·
+[Where it breaks](#where-it-breaks) ·
+[Setup](#setup)
+
+</div>
+
+---
+
+## See it before you read it
+
+Six interactive simulations, built so a non-technical colleague can follow the flow.
+**No install, no API key, nothing is actually called.** Press play, drag a threshold,
+watch the routing change.
+
+<a href="https://exponen-agi.github.io/jev-playground/01-triage-cascade.html">
+  <img src="docs/demo.gif" alt="Support tickets flowing through Jev and fanning out to a database lookup, two specialist AI prompts, and a human queue" width="100%">
+</a>
+
+| | Simulation | What it shows | Try |
+|---|---|---|---|
+| **01** | [Support triage cascade](https://exponen-agi.github.io/jev-playground/01-triage-cascade.html) | Most tickets never reach an expensive model | Drag the confidence floor |
+| **02** | [The gatekeeper](https://exponen-agi.github.io/jev-playground/02-rag-gatekeeper.html) | Screening documents before RAG, injection included | Raise the relevance bar |
+| **03** | [The checkpoint](https://exponen-agi.github.io/jev-playground/03-agent-guardrails.html) | Gating an AI agent's tool calls on four hazards | Move each hazard limit |
+| **04** | [The second pair of eyes](https://exponen-agi.github.io/jev-playground/04-output-verifier.html) | Checking a chatbot's reply before it sends | Step through four drafts |
+| **05** | [Scoring while they wait](https://exponen-agi.github.io/jev-playground/05-lead-scoring.html) | AI inside a form submit, under 200ms | Re-weight the formula |
+| **06** | [Picking the right brain](https://exponen-agi.github.io/jev-playground/06-model-router.html) | Routing across GPT, Claude, Gemini — or no model | Watch the split |
+
+> Prefer to run them locally? `git clone`, then open `simulations/index.html`.
+> The numbers in them are illustrative, not measured.
+
+---
+
+> The rest of this README is written for someone who has to put this in a request path,
+> not someone evaluating a demo.
 
 ---
 
 ## Table of contents
 
+- [See it before you read it](#see-it-before-you-read-it) — the interactive demos
 - [The one-paragraph version](#the-one-paragraph-version)
 - [Why this is a different shape of model](#why-this-is-a-different-shape-of-model)
 - [Hello, Jev](#hello-jev)
@@ -23,7 +64,7 @@ you already built around OpenAI, Claude, or Gemini.
 - [The numbers, and how much weight to put on them](#the-numbers-and-how-much-weight-to-put-on-them)
 - [Where it breaks](#where-it-breaks)
 - [Cookbooks: Jev + your existing LLM](#cookbooks-jev--your-existing-llm)
-- [See it running](#see-it-running)
+- [Running the demos locally](#running-the-demos-locally)
 - [Setup](#setup)
 - [How to pilot this without betting anything](#how-to-pilot-this-without-betting-anything)
 
@@ -578,27 +619,26 @@ bad material.
 
 ---
 
-## See it running
+## Running the demos locally
 
-If you would rather watch the patterns than read them, [`simulations/`](./simulations) has an
-animated, interactive page for each cookbook — built for someone who does not write code.
-Clone the repo and open [`simulations/index.html`](./simulations/index.html) in a browser — no
-build step, no keys, and no model is actually called. (GitHub renders `.html` as source, so the
-links below show markup rather than the page. The repo's
-[Pages workflow](./.github/workflows/pages.yml) also publishes them to
-`exponen-agi.github.io/jev-playground` on every push to `main`.)
+The [demos at the top](#see-it-before-you-read-it) are served from GitHub Pages. To run them
+from a checkout instead — offline, or to change one:
 
-| | Simulation | What you can play with |
-|---|---|---|
-| 01 | [Support triage cascade](./simulations/01-triage-cascade.html) | Drag the confidence floor and watch tickets move between the automated and human paths |
-| 02 | [The gatekeeper](./simulations/02-rag-gatekeeper.html) | Raise the relevance bar; watch a prompt-injection document get quarantined |
-| 03 | [The checkpoint](./simulations/03-agent-guardrails.html) | Move each hazard threshold independently and see verdicts flip |
-| 04 | [The second pair of eyes](./simulations/04-output-verifier.html) | Step through four drafts and watch six checks resolve |
-| 05 | [Scoring while they wait](./simulations/05-lead-scoring.html) | Re-weight the scoring formula and watch every lead re-sort live |
-| 06 | [Picking the right brain](./simulations/06-model-router.html) | Watch requests fan out across no-model, small, reasoning and human paths |
+```bash
+git clone https://github.com/exponen-agi/jev-playground.git
+open jev-playground/simulations/index.html      # macOS
+xdg-open jev-playground/simulations/index.html  # Linux
+start jev-playground\simulations\index.html     # Windows
+```
 
-The numbers in them are illustrative rather than measured — they exist to make the *shape*
-legible, which is the part that transfers.
+No build step, no package install, no keys. Each page is plain HTML with a small shared
+stylesheet and a 37 KB D3 bundle vendored into [`simulations/assets/`](./simulations/assets),
+so nothing is fetched at runtime.
+
+Note that GitHub renders `.html` as source, so opening a simulation *file* in this repo shows
+markup rather than the page — use the [live links](#see-it-before-you-read-it) or a local
+checkout. [`simulations/README.md`](./simulations/README.md) covers the structure and how to
+rebuild the D3 bundle.
 
 ---
 

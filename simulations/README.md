@@ -3,6 +3,12 @@
 Animated, interactive versions of the six [cookbooks](../cookbooks) — built so a non-technical
 colleague can see what the pattern does without reading Python.
 
+**[▶ Open the live demos](https://exponen-agi.github.io/jev-playground/)**
+
+[![Lead scoring simulation: four weighted factor bars combining into a composite score and a sales tier](../docs/lead-scoring.png)](https://exponen-agi.github.io/jev-playground/05-lead-scoring.html)
+
+<sub>Simulation 05 — drag a weight and every lead scored so far re-sorts.</sub>
+
 ### GitHub will not render these — here is how to actually view them
 
 GitHub serves `.html` files as *source code*, not as web pages. Clicking one here shows you
