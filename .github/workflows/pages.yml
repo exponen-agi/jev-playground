@@ -1,0 +1,54 @@
+# Publishes simulations/ to GitHub Pages so the HTML renders instead of
+# showing as source. One-time setup: Settings → Pages → Source: GitHub Actions.
+name: Deploy simulations to Pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "simulations/**"
+      - ".github/workflows/pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Let a running deploy finish; queue at most one behind it.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check every page and asset the simulations reference exists
+        run: |
+          cd simulations
+          status=0
+          for f in *.html; do
+            # every href/src that is a local path, not an anchor or a URL
+            grep -oE '(href|src)="[^"#][^":]*"' "$f" \
+              | sed -E 's/.*="([^"]*)".*/\1/' \
+              | while read -r ref; do
+                  if [ ! -e "$ref" ]; then
+                    echo "::error file=simulations/$f::broken reference -> $ref"
+                    exit 1
+                  fi
+                done || status=1
+          done
+          exit $status
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: simulations
+      - id: deploy
+        uses: actions/deploy-pages@v4

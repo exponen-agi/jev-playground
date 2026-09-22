@@ -3,7 +3,33 @@
 Animated, interactive versions of the six [cookbooks](../cookbooks) — built so a non-technical
 colleague can see what the pattern does without reading Python.
 
-**Open [`index.html`](./index.html) in any browser.** No build step, no install, no API keys.
+### GitHub will not render these — here is how to actually view them
+
+GitHub serves `.html` files as *source code*, not as web pages. Clicking one here shows you
+the markup. Three ways round that, cheapest first:
+
+**1. Download and open locally.** Clone or download the repo, then open
+`simulations/index.html` in any browser. No build step, no install, no API keys, no internet.
+
+```bash
+git clone https://github.com/exponen-agi/jev-playground.git
+open jev-playground/simulations/index.html      # macOS
+xdg-open jev-playground/simulations/index.html  # Linux
+start jev-playground\simulations\index.html     # Windows
+```
+
+**2. GitHub Pages** — the repo ships [`.github/workflows/pages.yml`](../.github/workflows/pages.yml),
+which deploys this folder on every push to `main`. It needs one click to switch on:
+
+> **Settings → Pages → Build and deployment → Source: _GitHub Actions_**
+
+After that the pages are live at
+`https://exponen-agi.github.io/jev-playground/` and every later push redeploys them.
+The workflow also fails the build if any page references a file that does not exist.
+
+**3. A quick preview, no setup** — paste a file's GitHub URL into
+[htmlpreview.github.io](https://htmlpreview.github.io/). Fine for a one-off look; it is a
+third-party proxy, so do not rely on it for anything you are sharing widely.
 
 > No AI is called. These are animations of the patterns with illustrative numbers, so the
 > *shape* is legible. They are not measurements.
