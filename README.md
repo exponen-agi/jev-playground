@@ -584,9 +584,9 @@ If you would rather watch the patterns than read them, [`simulations/`](./simula
 animated, interactive page for each cookbook — built for someone who does not write code.
 Clone the repo and open [`simulations/index.html`](./simulations/index.html) in a browser — no
 build step, no keys, and no model is actually called. (GitHub renders `.html` as source, so the
-links below show markup until the repo's [Pages workflow](./.github/workflows/pages.yml) is
-switched on: **Settings → Pages → Source: GitHub Actions**. After that they are live at
-`exponen-agi.github.io/jev-playground`.)
+links below show markup rather than the page. The repo's
+[Pages workflow](./.github/workflows/pages.yml) also publishes them to
+`exponen-agi.github.io/jev-playground` on every push to `main`.)
 
 | | Simulation | What you can play with |
 |---|---|---|

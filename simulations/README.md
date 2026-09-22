@@ -19,13 +19,15 @@ start jev-playground\simulations\index.html     # Windows
 ```
 
 **2. GitHub Pages** — the repo ships [`.github/workflows/pages.yml`](../.github/workflows/pages.yml),
-which deploys this folder on every push to `main`. It needs one click to switch on:
-
-> **Settings → Pages → Build and deployment → Source: _GitHub Actions_**
-
-After that the pages are live at
+which deploys this folder on every push to `main`. It turns Pages on by itself the first time
+it runs, so there is nothing to configure. The pages land at
 `https://exponen-agi.github.io/jev-playground/` and every later push redeploys them.
 The workflow also fails the build if any page references a file that does not exist.
+
+> If your organisation blocks Pages, that first run fails with
+> `Get Pages site failed`. Someone with admin rights then has to set
+> **Settings → Pages → Build and deployment → Source: _GitHub Actions_** by hand, after which
+> the workflow runs normally.
 
 **3. A quick preview, no setup** — paste a file's GitHub URL into
 [htmlpreview.github.io](https://htmlpreview.github.io/). Fine for a one-off look; it is a
