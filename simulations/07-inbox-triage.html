@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Shared Inbox</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%278%27 fill=%27%23d63c9e%27/%3E%3Cpath d=%27M20 8v11a5 5 0 0 1-9 3%27 stroke=%27white%27 stroke-width=%273%27 fill=%27none%27 stroke-linecap=%27round%27/%3E%3C/svg%3E">
+<link rel="stylesheet" href="assets/sim.css">
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="index.html">← all simulations</a>
+  <div class="top"><span class="eyebrow">Cookbook 07</span>
+    <span class="top-links">
+      <a class="repo-link" href="https://github.com/exponen-agi/jev-playground/blob/main/cookbooks/07_inbox_triage.py"
+         aria-label="View the Python source for cookbook 07 on GitHub">
+        <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M4.72 3.22a.75.75 0 0 1 1.06 1.06L2.06 8l3.72 3.72a.75.75 0 1 1-1.06 1.06L.47 8.53a.75.75 0 0 1 0-1.06l4.25-4.25Zm6.56 0a.75.75 0 1 0-1.06 1.06L13.94 8l-3.72 3.72a.75.75 0 1 0 1.06 1.06l4.25-4.25a.75.75 0 0 0 0-1.06l-4.25-4.25Z"></path></svg><span class="label">The Python</span> <span class="mono">07_inbox_triage.py</span>
+      </a>
+    </span>
+  </div>
+  <h1>The shared inbox</h1>
+  <p class="lede">One mailbox, three people half-watching it, and a purchase enquiry sitting
+  underneath four recruiters. Jev reads every message and puts it on the right desk — and when
+  it isn’t sure, it says so instead of guessing. <b>Drag the floor</b> to set how sure it has
+  to be before anything is filed without a person.</p>
+
+  <div class="panel">
+    <div class="controls">
+      <button id="play" class="primary">▶  Play</button>
+      <button id="step">Next email</button>
+      <button id="reset">Reset</button>
+      <div class="spacer"></div>
+      <label class="ctl">Speed <input id="speed" type="range" min="0.5" max="4" step="0.5" value="1"></label>
+    </div>
+
+    <div class="grid2">
+      <div>
+        <h2 style="font-size:14px;margin:0 0 10px">Just arrived in <span class="mono">info@</span></h2>
+        <div id="mail" style="background:var(--bg);border:1px solid var(--line);border-radius:9px;
+             padding:14px;min-height:168px;font-size:14px">Press <b>Play</b>.</div>
+        <div id="clock" style="margin-top:12px;font-family:var(--mono);font-size:12px;color:var(--muted)"></div>
+      </div>
+      <div>
+        <h2 style="font-size:14px;margin:0 0 10px">What Jev read — six questions, one call</h2>
+        <div id="read"></div>
+        <div id="verdict" style="margin-top:14px;padding-top:13px;border-top:1px solid var(--line)"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="panel">
+      <h2>Where the morning went</h2>
+      <div id="lanes"></div>
+    </div>
+    <div class="panel">
+      <h2>The floor <span class="sub">— the owner’s “when in doubt, ask me”, written down</span></h2>
+      <label class="ctl" style="display:block">
+        <div style="display:flex;justify-content:space-between;color:var(--ink);font-size:13px">
+          <span>File it without a person only above</span><span class="tick" id="floorv">0.75</span>
+        </div>
+        <input id="floor" type="range" min="0.5" max="0.95" step="0.05" value="0.75" style="width:100%;margin-top:4px">
+      </label>
+      <div class="stats" style="margin-top:14px">
+        <div class="stat" data-stat="seen"><div class="k">Read</div><div class="v">0</div><div class="n">emails</div></div>
+        <div class="stat" data-stat="auto"><div class="k">Filed</div><div class="v">0</div><div class="n">no person involved</div></div>
+        <div class="stat" data-stat="desk"><div class="k">Owner’s desk</div><div class="v">0</div><div class="n">flagged or unsure</div></div>
+        <div class="stat" data-stat="cost"><div class="k">Cost</div><div class="v">$0.000</div><div class="n">for all of it</div></div>
+      </div>
+      <p class="note" id="floor-note">Raise the floor and more lands on the owner’s desk — honestly
+      labelled <i>unsure</i>, which is the failure mode people forgive. Lower it and more gets filed,
+      including the odd thing that should not have been.</p>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Everything so far</h2>
+    <table class="rows"><thead><tr><th>From</th><th>Subject</th><th>Read as</th><th>Sure</th><th>Went to</th></tr></thead>
+    <tbody id="table"><tr><td colspan="5" class="note" style="border:0">Nothing yet.</td></tr></tbody></table>
+  </div>
+</div>
+
+<script type="module">
+import { $, Ticker, wireControls, setStat, dur } from "./assets/sim.js";
+
+// Illustrative reads. No model is called — these are the numbers a calibrated one
+// would plausibly return, chosen so the floor has something interesting to do.
+const MAIL = [
+  { from: "j.okonkwo@harbourside-dev.co", subj: "Flooring for a 3-floor office fit-out",
+    body: "We’re fitting out a building on Dock Road, roughly 900 sqm over three floors, and need heavy-traffic vinyl. What would that come to, and could we start in March?",
+    intent: "new enquiry", desk: "sales", conf: .96, urgency: 1.8, quote: .93, escalate: .03 },
+  { from: "accounts@midland-supply.com", subj: "Overdue: INV-20418",
+    body: "Invoice INV-20418 for $4,120 was due on the 14th and remains unpaid. Please advise on payment or we will place the account on hold.",
+    intent: "billing", desk: "accounts", conf: .94, urgency: 2.6, quote: .02, escalate: .21 },
+  { from: "dana.p@crestwood-retail.com", subj: "Re: Re: still not fixed",
+    body: "This is the third time I’ve written about the lifting seam in the showroom. Someone was supposed to come out a fortnight ago. If it isn’t resolved this week we’ll be taking it further and cancelling the maintenance contract.",
+    intent: "customer issue", desk: "support", conf: .91, urgency: 3.0, quote: .01, escalate: .88 },
+  { from: "hello@growthspark.io", subj: "Quick question about your marketing",
+    body: "Hi! I noticed your website isn’t ranking for ‘commercial flooring’. We help businesses like yours 10x their leads. Free audit — interested?",
+    intent: "bulk", desk: "—", conf: .95, urgency: 0.1, quote: .07, escalate: .01 },
+  { from: "s.bayer@gmail.com", subj: "(no subject)",
+    body: "is this the right number for the thing on tuesday",
+    intent: "other", desk: "owner", conf: .41, urgency: 1.1, quote: .05, escalate: .04 },
+  { from: "recruitment@talentbridge.co", subj: "Site supervisors, immediate availability",
+    body: "We have three experienced site supervisors available this month. Happy to send CVs across.",
+    intent: "recruitment", desk: "owner", conf: .88, urgency: 0.4, quote: .02, escalate: .02 },
+  { from: "orders@coastal-underlay.com", subj: "Delivery Friday — access?",
+    body: "Your pallet is scheduled for Friday AM. Confirm someone will be on site to take it, otherwise we reschedule to the 30th.",
+    intent: "supplier", desk: "operations", conf: .92, urgency: 2.7, quote: .01, escalate: .05 },
+  { from: "m.reyes@fernbank-school.org", subj: "Quote for gym hall — and a question about the last one",
+    body: "Two things: can you quote for the gym hall (420 sqm), and the invoice from the corridor job has the wrong PO number on it.",
+    intent: "new enquiry", desk: "sales", conf: .62, urgency: 1.6, quote: .81, escalate: .04 },
+];
+
+const DESKS = {
+  sales:      { label: "Sales — Ravi",          colour: "--code" },
+  support:    { label: "Support — Mei",         colour: "--llm" },
+  accounts:   { label: "Accounts — Tom",        colour: "--llm" },
+  operations: { label: "Operations — Tom",      colour: "--code" },
+  owner:      { label: "The owner’s desk",      colour: "--human" },
+  archived:   { label: "Archived, unread",      colour: "--muted" },
+};
+
+const ESCALATE_AT = 0.55, BULK_ARCHIVE_AT = 0.90, PER_EMAIL = 0.0004;
+let floor = 0.75, i = 0, seen = [];
+
+// The routing table, exactly as the cookbook has it. Three rules, in order.
+function route(m) {
+  if (m.escalate > ESCALATE_AT) return { desk: "owner", why: "flagged — needs a person" };
+  if (m.conf < floor)           return { desk: "owner", why: "unsure — not guessing" };
+  if (m.intent === "bulk" && m.conf > BULK_ARCHIVE_AT) return { desk: "archived", why: "bulk" };
+  return { desk: m.desk, why: "routed" };
+}
+
+function tick() {
+  if (i >= MAIL.length) { ticker.pause(); return; }
+  const m = MAIL[i++];
+
+  $("#mail").innerHTML = `<div style="font-weight:650;font-size:13px">${m.from}</div>
+    <div style="color:var(--muted);font-size:12.5px;margin-bottom:10px">${m.subj}</div>
+    <div>${m.body}</div>`;
+  $("#clock").textContent = "reading…";
+  $("#read").innerHTML = "";
+  $("#verdict").innerHTML = "";
+
+  setTimeout(() => {
+    $("#clock").innerHTML = `read in <b style="color:var(--jev)">140 ms</b> — six questions, one call, $0.0004`;
+    $("#read").innerHTML = [
+      ["What it is", m.intent, m.conf],
+      ["Whose job", m.desk === "—" ? "nobody’s" : DESKS[m.desk].label, m.conf],
+    ].map(([k, v]) => `<div style="display:flex;justify-content:space-between;margin:7px 0;font-size:13px">
+        <span style="color:var(--muted)">${k}</span><span style="font-weight:600">${v}</span></div>`).join("")
+      + [["How urgent", (m.urgency / 3), `${m.urgency.toFixed(1)} / 3`],
+         ["Wants a price", m.quote, m.quote.toFixed(2)],
+         ["Needs a person now", m.escalate, m.escalate.toFixed(2)]]
+        .map(([k, frac, label]) => `<div style="margin:9px 0">
+            <div style="display:flex;justify-content:space-between;font-size:12.5px">
+              <span style="color:var(--muted)">${k}</span><span class="tick">${label}</span></div>
+            <div class="bar"><span style="width:${frac * 100}%;background:var(--jev)"></span></div>
+          </div>`).join("");
+    seen.push(m);
+    repaint();
+  }, dur(420));
+}
+
+function repaint() {
+  const m = seen[seen.length - 1];
+  if (m) {
+    const r = route(m), d = DESKS[r.desk];
+    $("#verdict").innerHTML =
+      `<span class="pill" style="font-size:13px;padding:5px 14px;border-width:2px;color:var(${d.colour});border-color:var(${d.colour})">${d.label}</span>
+       <div class="note" style="margin-top:9px">${explain(m, r)}</div>`;
+  }
+
+  const counts = {};
+  seen.forEach((x) => { const k = route(x).desk; counts[k] = (counts[k] || 0) + 1; });
+  $("#lanes").innerHTML = Object.entries(DESKS).map(([k, d]) => {
+    const n = counts[k] || 0;
+    return `<div style="margin:9px 0">
+      <div style="display:flex;justify-content:space-between;font-size:13px">
+        <span style="color:${n ? "var(--ink)" : "var(--muted)"}">${d.label}</span>
+        <span class="tick">${n}</span></div>
+      <div class="bar"><span style="width:${seen.length ? n / seen.length * 100 : 0}%;background:var(${d.colour})"></span></div>
+    </div>`;
+  }).join("");
+
+  const desk = counts.owner || 0;
+  setStat("seen", seen.length);
+  setStat("auto", seen.length - desk);
+  setStat("desk", desk);
+  setStat("cost", "$" + (seen.length * PER_EMAIL).toFixed(3));
+
+  $("#table").innerHTML = seen.length ? seen.map((x) => {
+    const r = route(x), d = DESKS[r.desk];
+    return `<tr><td style="font-size:12px">${x.from.split("@")[0]}</td>
+      <td style="font-size:12px;color:var(--muted)">${x.subj.length > 34 ? x.subj.slice(0, 33) + "…" : x.subj}</td>
+      <td style="font-size:12px">${x.intent}</td>
+      <td class="tick">${x.conf.toFixed(2)}</td>
+      <td><span class="pill" style="color:var(${d.colour});border-color:var(${d.colour})">${r.why}</span></td></tr>`;
+  }).join("") : `<tr><td colspan="5" class="note" style="border:0">Nothing yet.</td></tr>`;
+}
+
+function explain(m, r) {
+  if (r.why.startsWith("flagged")) return "A legal threat or a customer about to walk overrides the routing table entirely — that check runs first.";
+  if (r.why.startsWith("unsure")) return `Only ${m.conf.toFixed(2)} sure what this is, and the floor is ${floor.toFixed(2)}. One pile of genuinely ambiguous mail beats a plausible-looking wrong folder.`;
+  if (r.why === "bulk") return "Archived unread. Note the higher bar for this one: leaving a newsletter in the inbox is cheap, archiving a real customer is not.";
+  if (r.desk === "owner") return "Confidently read, and the owner’s desk is genuinely where it belongs — a hiring decision is not something to route away. Arrives labelled, not unsorted.";
+  return "Filed. Nobody had to open it.";
+}
+
+const ticker = new Ticker(tick, 2600);
+wireControls({
+  ticker, playBtn: $("#play"), stepBtn: $("#step"), resetBtn: $("#reset"), speedInput: $("#speed"),
+  onReset() {
+    i = 0; seen = [];
+    $("#mail").innerHTML = "Press <b>Play</b>."; $("#read").innerHTML = "";
+    $("#clock").textContent = ""; $("#verdict").innerHTML = "";
+    repaint();
+  },
+});
+
+$("#floor").addEventListener("input", (e) => {
+  floor = +e.target.value;
+  $("#floorv").textContent = floor.toFixed(2);
+  repaint();
+});
+
+repaint();
+</script>
+</body>
+</html>

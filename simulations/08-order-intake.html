@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Orders By WhatsApp</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%278%27 fill=%27%23d63c9e%27/%3E%3Cpath d=%27M20 8v11a5 5 0 0 1-9 3%27 stroke=%27white%27 stroke-width=%273%27 fill=%27none%27 stroke-linecap=%27round%27/%3E%3C/svg%3E">
+<link rel="stylesheet" href="assets/sim.css">
+<style>
+  .thread { background: var(--bg); border: 1px solid var(--line); border-radius: 9px;
+            padding: 12px; min-height: 260px; max-height: 320px; overflow-y: auto; }
+  .msg { max-width: 86%; padding: 8px 11px; border-radius: 12px; font-size: 13.5px;
+         margin: 7px 0; background: var(--panel); border: 1px solid var(--line); }
+  .msg.them { border-bottom-left-radius: 3px; }
+  .msg.us { margin-left: auto; border-bottom-right-radius: 3px;
+            background: color-mix(in srgb, var(--code) 14%, var(--panel)); }
+  .msg .who { font-size: 10.5px; color: var(--muted); font-family: var(--mono); margin-bottom: 2px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="index.html">← all simulations</a>
+  <div class="top"><span class="eyebrow">Cookbook 08</span>
+    <span class="top-links">
+      <a class="repo-link" href="https://github.com/exponen-agi/jev-playground/blob/main/cookbooks/08_order_intake.py"
+         aria-label="View the Python source for cookbook 08 on GitHub">
+        <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M4.72 3.22a.75.75 0 0 1 1.06 1.06L2.06 8l3.72 3.72a.75.75 0 1 1-1.06 1.06L.47 8.53a.75.75 0 0 1 0-1.06l4.25-4.25Zm6.56 0a.75.75 0 1 0-1.06 1.06L13.94 8l-3.72 3.72a.75.75 0 1 0 1.06 1.06l4.25-4.25a.75.75 0 0 0 0-1.06l-4.25-4.25Z"></path></svg><span class="label">The Python</span> <span class="mono">08_order_intake.py</span>
+      </a>
+    </span>
+  </div>
+  <h1>Orders by WhatsApp</h1>
+  <p class="lede">For a lot of businesses the ordering system <i>is</i> a phone number. The messages
+  are short, unpunctuated and half of them say “ok”. Jev works out which ones are actually an
+  order — and a five-line regex, not the model, reads the number.
+  <b>Drag the bar</b> to set how sure it must be before an order is created without a person.</p>
+
+  <div class="panel">
+    <div class="controls">
+      <button id="play" class="primary">▶  Play</button>
+      <button id="step">Next message</button>
+      <button id="reset">Reset</button>
+      <div class="spacer"></div>
+      <label class="ctl">Speed <input id="speed" type="range" min="0.5" max="4" step="0.5" value="1"></label>
+    </div>
+
+    <div class="grid2">
+      <div>
+        <h2 style="font-size:14px;margin:0 0 10px">Pier Cafe · acct 3318</h2>
+        <div class="thread" id="thread"><p class="note" style="margin:0">Press <b>Play</b>.</p></div>
+      </div>
+      <div>
+        <h2 style="font-size:14px;margin:0 0 10px">What Jev read · what the parser read</h2>
+        <div id="read"><p class="note" style="margin:0">Nothing yet.</p></div>
+        <div id="verdict" style="margin-top:14px;padding-top:13px;border-top:1px solid var(--line)"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="panel">
+      <h2>How sure before we act <span class="sub">— a wrong order costs a delivery and a phone call</span></h2>
+      <label class="ctl" style="display:block">
+        <div style="display:flex;justify-content:space-between;color:var(--ink);font-size:13px">
+          <span>Create the order automatically above</span><span class="tick" id="barv">0.88</span>
+        </div>
+        <input id="bar" type="range" min="0.6" max="0.98" step="0.02" value="0.88" style="width:100%;margin-top:4px">
+      </label>
+      <div class="stats" style="margin-top:14px">
+        <div class="stat" data-stat="msgs"><div class="k">Messages</div><div class="v">0</div><div class="n">received</div></div>
+        <div class="stat" data-stat="orders"><div class="k">Orders</div><div class="v">0</div><div class="n">created outright</div></div>
+        <div class="stat" data-stat="asked"><div class="k">Asked back</div><div class="v">0</div><div class="n">one question</div></div>
+        <div class="stat" data-stat="person"><div class="k">To a person</div><div class="v">0</div><div class="n">including complaints</div></div>
+      </div>
+      <p class="note">Roughly half a real thread is “ok”, “thanks”, “👍”. None of it reaches a model
+      that charges by the token — a confident <i>chit-chat</i> read ends the matter.</p>
+    </div>
+    <div class="panel">
+      <h2>Every message so far</h2>
+      <table class="rows"><thead><tr><th>Message</th><th>Read as</th><th>Qty</th><th>Outcome</th></tr></thead>
+      <tbody id="table"><tr><td colspan="4" class="note" style="border:0">Nothing yet.</td></tr></tbody></table>
+      <p class="note" id="split"><b>Jev judges. Code parses.</b> The model is never asked to
+      extract the number — its answer space has to exist before it runs, so it is asked whether a
+      quantity is <i>there</i>. If the two disagree, that disagreement is the signal, and a person
+      looks at it.</p>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { $, Ticker, wireControls, setStat, dur } from "./assets/sim.js";
+
+const CATALOGUE = {
+  still_500: "Still water 500ml · case of 24",
+  still_1l:  "Still water 1L · case of 12",
+  spark_330: "Sparkling 330ml · case of 24",
+  cups_8oz:  "Paper cups 8oz · sleeve of 1000",
+};
+
+// Illustrative reads, plus what a plain regex actually finds in the same text.
+const THREAD = [
+  { text: "morning — can we get 6 cases of the 500ml still for thursday",
+    type: "new order", typeConf: .95, product: "still_500", prodConf: .94,
+    stated: .97, qty: 6, history: .04, urgency: 1.9, unhappy: .02 },
+  { text: "👍", type: "chit-chat", typeConf: .97, product: null, prodConf: .2,
+    stated: .01, qty: null, history: .02, urgency: 0, unhappy: .01 },
+  { text: "same as last time please", type: "new order", typeConf: .89, product: null,
+    prodConf: .38, stated: .12, qty: null, history: .95, urgency: 1.2, unhappy: .03 },
+  { text: "how much are the 8oz cups now", type: "price query", typeConf: .93,
+    product: "cups_8oz", prodConf: .96, stated: .05, qty: null, history: .03, urgency: .8, unhappy: .02 },
+  { text: "need cups asap we're out", type: "new order", typeConf: .84, product: "cups_8oz",
+    prodConf: .91, stated: .06, qty: null, history: .21, urgency: 3.0, unhappy: .18 },
+  { text: "a dozen of the sparkling for the weekend", type: "new order", typeConf: .93,
+    product: "spark_330", prodConf: .90, stated: .88, qty: 12, history: .05, urgency: 2.1, unhappy: .03 },
+  { text: "double the usual on the 1L", type: "new order", typeConf: .87, product: "still_1l",
+    prodConf: .86, stated: .79, qty: null, history: .74, urgency: 1.4, unhappy: .04 },
+  { text: "the sparkling came short again, 2 cases missing. third time this month.",
+    type: "complaint", typeConf: .94, product: "spark_330", prodConf: .88,
+    stated: .86, qty: 2, history: .30, urgency: 2.4, unhappy: .91 },
+];
+
+const LAST_ORDER = { sku: "still_500", qty: 4 };
+const ASK_BACK = 0.60, UNHAPPY_AT = 0.5;
+let auto = 0.88, i = 0, seen = [];
+
+// The cookbook's control flow, line for line.
+function decide(m) {
+  if (m.unhappy > UNHAPPY_AT || m.type === "complaint")
+    return { k: "person", label: "a person, now", colour: "--danger",
+             note: "Anything with heat in it goes to the owner, order or not." };
+  if (m.type === "chit-chat" && m.typeConf > .8)
+    return { k: "ignored", label: "ignored", colour: "--muted",
+             note: "No action, no reply, nobody read it. This branch is why the pattern pays." };
+  if (m.type !== "new order")
+    return { k: "queue", label: m.type + " queue", colour: "--llm",
+             note: "Routed to a person with Jev’s read already attached." };
+
+  if (m.product === null || m.prodConf < ASK_BACK) {
+    if (m.history > .6)
+      return { k: "orders", label: "draft from history", colour: "--code",
+               note: `“The usual” resolved from state that was already in the call: ${LAST_ORDER.qty} × ${CATALOGUE[LAST_ORDER.sku]}. No second round trip.` };
+    return { k: "asked", label: "ask which product", colour: "--human",
+             note: "The one branch worth a frontier model: a short, human-sounding question back." };
+  }
+  if (m.stated > .5 && m.qty === null)
+    return { k: "person", label: "quantity unclear", colour: "--danger",
+             note: "Jev saw a quantity. The parser did not. Nobody guesses — a person looks." };
+  if (m.stated <= .5 || m.qty === null)
+    return { k: "asked", label: "ask how many", colour: "--human",
+             note: "Product is clear, the number isn’t. One short question, then it’s an order." };
+  if (m.typeConf < auto || m.prodConf < auto)
+    return { k: "asked", label: "held for review", colour: "--human",
+             note: `Under the ${auto.toFixed(2)} bar (${Math.min(m.typeConf, m.prodConf).toFixed(2)}). Drafted, not sent.` };
+
+  return { k: "orders", label: "order created", colour: "--code",
+           note: `${m.qty} × ${CATALOGUE[m.product]} — confirmed by a template, not by a model.` };
+}
+
+function tick() {
+  if (i >= THREAD.length) { ticker.pause(); return; }
+  const m = THREAD[i++];
+
+  if (i === 1) $("#thread").innerHTML = "";
+  const el = document.createElement("div");
+  el.className = "msg them";
+  el.innerHTML = `<div class="who">Pier Cafe</div>${m.text}`;
+  $("#thread").append(el);
+  $("#thread").scrollTop = $("#thread").scrollHeight;
+
+  $("#read").innerHTML = `
+    <div style="display:flex;justify-content:space-between;margin:7px 0;font-size:13px">
+      <span style="color:var(--muted)">What it is</span>
+      <span style="font-weight:600">${m.type} <span class="tick" style="color:var(--muted)">${m.typeConf.toFixed(2)}</span></span></div>
+    <div style="display:flex;justify-content:space-between;margin:7px 0;font-size:13px">
+      <span style="color:var(--muted)">Which product</span>
+      <span style="font-weight:600">${m.product ? CATALOGUE[m.product] : "unclear"} <span class="tick" style="color:var(--muted)">${m.prodConf.toFixed(2)}</span></span></div>
+    ${["Quantity is stated", "Means “the usual”", "Annoyed"].map((k, n) => {
+      const v = [m.stated, m.history, m.unhappy][n];
+      return `<div style="margin:9px 0">
+        <div style="display:flex;justify-content:space-between;font-size:12.5px">
+          <span style="color:var(--muted)">${k}</span><span class="tick">${v.toFixed(2)}</span></div>
+        <div class="bar"><span style="width:${v * 100}%;background:var(--jev)"></span></div></div>`;
+    }).join("")}
+    <div style="margin-top:12px;padding:9px 11px;border:1px dashed var(--line);border-radius:8px;
+         font-family:var(--mono);font-size:11.5px;color:var(--muted)">
+      regex → ${m.qty === null ? "<span style='color:var(--danger)'>no number found</span>" : "<b style='color:var(--ink)'>" + m.qty + "</b>"}</div>`;
+
+  seen.push(m);
+  setTimeout(() => {
+    const d = decide(m);
+    if (d.k !== "ignored") {
+      const reply = document.createElement("div");
+      reply.className = "msg us";
+      reply.innerHTML = `<div class="who">${d.k === "orders" ? "automatic" : d.k === "asked" ? "drafted reply" : "internal"}</div>${d.label}`;
+      $("#thread").append(reply);
+      $("#thread").scrollTop = $("#thread").scrollHeight;
+    }
+    repaint();
+  }, dur(500));
+}
+
+function repaint() {
+  const m = seen[seen.length - 1];
+  if (m) {
+    const d = decide(m);
+    $("#verdict").innerHTML =
+      `<span class="pill" style="font-size:13px;padding:5px 14px;border-width:2px;color:var(${d.colour});border-color:var(${d.colour})">${d.label}</span>
+       <div class="note" style="margin-top:9px">${d.note}</div>`;
+  }
+  const c = { orders: 0, asked: 0, person: 0, ignored: 0, queue: 0 };
+  seen.forEach((x) => { c[decide(x).k]++; });
+  setStat("msgs", seen.length);
+  setStat("orders", c.orders);
+  setStat("asked", c.asked);
+  setStat("person", c.person + c.queue);
+
+  $("#table").innerHTML = seen.length ? seen.map((x) => {
+    const d = decide(x);
+    return `<tr><td style="font-size:12px">${x.text.slice(0, 30)}${x.text.length > 30 ? "…" : ""}</td>
+      <td style="font-size:12px;color:var(--muted)">${x.type}</td>
+      <td class="tick">${x.qty === null ? "—" : x.qty}</td>
+      <td><span class="pill" style="color:var(${d.colour});border-color:var(${d.colour})">${d.label}</span></td></tr>`;
+  }).join("") : `<tr><td colspan="4" class="note" style="border:0">Nothing yet.</td></tr>`;
+}
+
+const ticker = new Ticker(tick, 2600);
+wireControls({
+  ticker, playBtn: $("#play"), stepBtn: $("#step"), resetBtn: $("#reset"), speedInput: $("#speed"),
+  onReset() {
+    i = 0; seen = [];
+    $("#thread").innerHTML = `<p class="note" style="margin:0">Press <b>Play</b>.</p>`;
+    $("#read").innerHTML = `<p class="note" style="margin:0">Nothing yet.</p>`;
+    $("#verdict").innerHTML = "";
+    repaint();
+  },
+});
+
+$("#bar").addEventListener("input", (e) => {
+  auto = +e.target.value;
+  $("#barv").textContent = auto.toFixed(2);
+  repaint();
+});
+
+repaint();
+</script>
+</body>
+</html>

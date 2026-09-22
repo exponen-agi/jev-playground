@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Bill That Just Arrived</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%278%27 fill=%27%23d63c9e%27/%3E%3Cpath d=%27M20 8v11a5 5 0 0 1-9 3%27 stroke=%27white%27 stroke-width=%273%27 fill=%27none%27 stroke-linecap=%27round%27/%3E%3C/svg%3E">
+<link rel="stylesheet" href="assets/sim.css">
+<style>
+  .doc { background: var(--bg); border: 1px solid var(--line); border-radius: 9px;
+         padding: 14px; min-height: 186px; font-family: var(--mono); font-size: 12px;
+         white-space: pre-wrap; line-height: 1.55; }
+  .po { display: flex; justify-content: space-between; gap: 10px; padding: 8px 10px;
+        border: 1px solid var(--line-soft); border-radius: 8px; margin: 6px 0; font-size: 12.5px;
+        transition: border-color .2s, background .2s; }
+  .po.hit { border-color: var(--code); background: color-mix(in srgb, var(--code) 9%, transparent); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="index.html">← all simulations</a>
+  <div class="top"><span class="eyebrow">Cookbook 09</span>
+    <span class="top-links">
+      <a class="repo-link" href="https://github.com/exponen-agi/jev-playground/blob/main/cookbooks/09_invoice_intake.py"
+         aria-label="View the Python source for cookbook 09 on GitHub">
+        <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M4.72 3.22a.75.75 0 0 1 1.06 1.06L2.06 8l3.72 3.72a.75.75 0 1 1-1.06 1.06L.47 8.53a.75.75 0 0 1 0-1.06l4.25-4.25Zm6.56 0a.75.75 0 1 0-1.06 1.06L13.94 8l-3.72 3.72a.75.75 0 1 0 1.06 1.06l4.25-4.25a.75.75 0 0 0 0-1.06l-4.25-4.25Z"></path></svg><span class="label">The Python</span> <span class="mono">09_invoice_intake.py</span>
+      </a>
+    </span>
+  </div>
+  <h1>The bill that just arrived</h1>
+  <p class="lede">Is it an invoice or a statement? Have we paid it already? Does it match something
+  we actually ordered? The interesting part is that the answer needs <b>your</b> data — your open
+  orders go into the same call as the document. <b>Drag the approval limit</b> to decide how much
+  the business will pay without anyone looking.</p>
+
+  <div class="panel">
+    <div class="controls">
+      <button id="play" class="primary">▶  Play</button>
+      <button id="step">Next document</button>
+      <button id="reset">Reset</button>
+      <div class="spacer"></div>
+      <label class="ctl">Speed <input id="speed" type="range" min="0.5" max="4" step="0.5" value="1"></label>
+    </div>
+
+    <div class="grid2">
+      <div>
+        <h2 style="font-size:14px;margin:0 0 10px">The attachment, after OCR</h2>
+        <div class="doc" id="doc">Press <b>Play</b>.</div>
+      </div>
+      <div>
+        <h2 style="font-size:14px;margin:0 0 10px">Six checks, one call</h2>
+        <div id="checks"><p class="note" style="margin:0">Nothing yet.</p></div>
+        <div id="verdict" style="margin-top:14px;padding-top:13px;border-top:1px solid var(--line)"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="panel">
+      <h2>Your open orders <span class="sub">— passed in as state, not as prompt text</span></h2>
+      <div id="pos"></div>
+      <p class="note">“Does this bill match something we ordered?” is not a language question. It is a
+      question about a list you already have in memory, answered in the same round trip as the rest.</p>
+    </div>
+    <div class="panel">
+      <h2>The approval limit <span class="sub">— a policy number, in code, with a diff</span></h2>
+      <label class="ctl" style="display:block">
+        <div style="display:flex;justify-content:space-between;color:var(--ink);font-size:13px">
+          <span>Pay matched, routine bills up to</span><span class="tick" id="limv">$1,000</span>
+        </div>
+        <input id="lim" type="range" min="250" max="3000" step="50" value="1000" style="width:100%;margin-top:4px">
+      </label>
+      <div class="stats" style="margin-top:14px">
+        <div class="stat" data-stat="docs"><div class="k">Opened</div><div class="v">0</div><div class="n">documents</div></div>
+        <div class="stat" data-stat="filed"><div class="k">Filed</div><div class="v">0</div><div class="n">nobody looked</div></div>
+        <div class="stat" data-stat="appr"><div class="k">Approval</div><div class="v">0</div><div class="n">one click each</div></div>
+        <div class="stat" data-stat="held"><div class="k">Held</div><div class="v">0</div><div class="n">owner or supplier</div></div>
+      </div>
+      <p class="note" id="limnote"></p>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>The morning’s post</h2>
+    <table class="rows"><thead><tr><th>Document</th><th>Read as</th><th>Matched</th><th>Total</th><th>Outcome</th></tr></thead>
+    <tbody id="table"><tr><td colspan="5" class="note" style="border:0">Nothing yet.</td></tr></tbody></table>
+  </div>
+</div>
+
+<script type="module">
+import { $, Ticker, wireControls, setStat, dur } from "./assets/sim.js";
+
+const OPEN_POS = [
+  { po: "PO-4471", supplier: "Midland Supply Co",  what: "Paper cups and lids",        amount: 1840.00 },
+  { po: "PO-4472", supplier: "Harbour Print",      what: "Menu reprint, 2000 units",   amount: 612.50 },
+  { po: "PO-4480", supplier: "Coastal Cold Chain", what: "September chiller service",  amount: 295.00 },
+];
+const ALREADY_PAID = ["INV-20390", "HP-1188"];
+
+const DOCS = [
+  { name: "MS-20441.pdf", total: 1840.00, paid: false,
+    text: `MIDLAND SUPPLY CO — INVOICE MS-20441
+To: Pier Cafe Ltd.   Your order: PO-4471
+Paper cups 8oz x 4 sleeves
+Lids 8oz x 4 sleeves
+Total: 1,840.00   Due: 2026-10-01
+VAT reg 448 2910 55
+Bank: Northbridge 40-12-88 / 3399 2010`,
+    type: "invoice", typeConf: .97, match: "PO-4471", matchConf: .96,
+    amountOk: .98, complete: .95, unusual: .2, payee: .02 },
+
+  { name: "HP-1188.pdf", total: 612.50, paid: true,
+    text: `HARBOUR PRINT — INVOICE HP-1188
+Menu reprint, 2000 units
+Total: 612.50   Due: 2026-09-30`,
+    type: "invoice", typeConf: .95, match: "PO-4472", matchConf: .93,
+    amountOk: .97, complete: .71, unusual: .4, payee: .03 },
+
+  { name: "CCC-8871.pdf", total: 295.00, paid: false,
+    text: `COASTAL COLD CHAIN
+*** URGENT — OUR BANK DETAILS HAVE CHANGED ***
+Invoice CCC-8871, September chiller service
+Total: 295.00
+Payment must be received within 24 hours to
+avoid service suspension.
+New account: 62-11-04 / 8871 4420`,
+    type: "invoice", typeConf: .92, match: "PO-4480", matchConf: .89,
+    amountOk: .96, complete: .88, unusual: 2.9, payee: .94 },
+
+  { name: "statement-aug.pdf", total: null, paid: false,
+    text: `MIDLAND SUPPLY CO — STATEMENT OF ACCOUNT
+Period: August 2026
+Opening 2,410.00   Payments 2,410.00
+Closing 0.00
+This is not a demand for payment.`,
+    type: "statement", typeConf: .96, match: "none", matchConf: .91,
+    amountOk: .1, complete: .6, unusual: .1, payee: .01 },
+
+  { name: "quickflow.pdf", total: 3600.00, paid: false,
+    text: `QUICKFLOW LTD — INVOICE
+Consultancy services rendered
+Total: 3,600.00
+Please remit promptly.`,
+    type: "invoice", typeConf: .90, match: "none", matchConf: .86,
+    amountOk: .2, complete: .28, unusual: 2.1, payee: .12 },
+
+  { name: "delivery-4471.jpg", total: null, paid: false,
+    text: `MIDLAND SUPPLY CO — DELIVERY NOTE
+Order PO-4471 · 4 sleeves cups, 4 sleeves lids
+Received by: M. Osei
+No amounts shown on this document.`,
+    type: "delivery note", typeConf: .94, match: "PO-4471", matchConf: .95,
+    amountOk: .1, complete: .4, unusual: .1, payee: .01 },
+];
+
+const FILE_CONFIDENCE = .88, CHASE_CONFIDENCE = .55, UNUSUAL_HOLD = 2.0, FRAUD_ALARM = .35;
+const money = (n) => "$" + n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+let limit = 1000, i = 0, seen = [];
+
+// Order matters. Fraud first, duplicates second, everything else after.
+function decide(d) {
+  if (d.payee > FRAUD_ALARM || d.unusual > 2.6)
+    return { k: "held", label: "HELD — ring them", colour: "--danger",
+             note: "Changed bank details or pressure to pay today. Never actioned automatically — and this check runs before any other, so a perfectly matched invoice cannot slip past it." };
+  if (ALREADY_PAID.includes(d.name.replace(".pdf", "")))
+    return { k: "held", label: "already paid", colour: "--danger",
+             note: "A set lookup against the ledger, not a judgement. Paying twice is the expensive mistake this pattern exists to stop." };
+  if (d.typeConf < CHASE_CONFIDENCE)
+    return { k: "held", label: "to the owner", colour: "--human", note: "Could not tell what this is. Not guessing." };
+  if (["statement", "delivery note", "receipt"].includes(d.type))
+    return { k: "filed", label: "filed, no action", colour: "--muted",
+             note: `Read as a ${d.type}. No payment due, so nobody opened it.` };
+  if (d.complete < .5)
+    return { k: "held", label: "chase the supplier", colour: "--llm",
+             note: "Missing something needed to pay it. Low bar on purpose — being wrong here costs one polite email, so this is the branch a frontier model writes." };
+  if (d.match === "none" || d.matchConf < FILE_CONFIDENCE)
+    return { k: "held", label: "no matching order", colour: "--human",
+             note: "Nothing on the open-order list fits. Either it is a real cost nobody raised an order for, or it is not ours at all." };
+  if (d.amountOk < .6)
+    return { k: "held", label: "amount variance", colour: "--human", note: "Matched, but the total disagrees with the order." };
+  if (d.unusual > UNUSUAL_HOLD)
+    return { k: "held", label: "unusual", colour: "--human", note: "Matched, but it does not look like a routine bill from this supplier." };
+  if (d.total > limit)
+    return { k: "appr", label: "approval queue", colour: "--llm",
+             note: `${money(d.total)} is over the $${limit.toLocaleString()} limit. Already matched to ${d.match}, so approving is one click rather than ten minutes of checking.` };
+  return { k: "filed", label: "filed for payment", colour: "--code",
+           note: `Matched to ${d.match}, complete, routine, under the limit. Nobody opened this attachment.` };
+}
+
+function tick() {
+  if (i >= DOCS.length) { ticker.pause(); return; }
+  const d = DOCS[i++];
+  $("#doc").textContent = d.text;
+  $("#checks").innerHTML = `
+    <div style="display:flex;justify-content:space-between;margin:7px 0;font-size:13px">
+      <span style="color:var(--muted)">What it is</span>
+      <span style="font-weight:600">${d.type} <span class="tick" style="color:var(--muted)">${d.typeConf.toFixed(2)}</span></span></div>
+    <div style="display:flex;justify-content:space-between;margin:7px 0;font-size:13px">
+      <span style="color:var(--muted)">Matches order</span>
+      <span style="font-weight:600">${d.match} <span class="tick" style="color:var(--muted)">${d.matchConf.toFixed(2)}</span></span></div>
+    ${[["Total agrees", d.amountOk], ["Has everything to pay it", d.complete],
+       ["Out of the ordinary", d.unusual / 3], ["Payee or urgency changed", d.payee]]
+      .map(([k, v], n) => `<div style="margin:9px 0">
+        <div style="display:flex;justify-content:space-between;font-size:12.5px">
+          <span style="color:var(--muted)">${k}</span>
+          <span class="tick">${n === 2 ? (d.unusual).toFixed(1) + " / 3" : v.toFixed(2)}</span></div>
+        <div class="bar"><span style="width:${v * 100}%;background:var(${n === 3 && v > .35 ? "--danger" : "--jev"})"></span></div></div>`).join("")}
+    <div style="margin-top:12px;padding:9px 11px;border:1px dashed var(--line);border-radius:8px;
+         font-family:var(--mono);font-size:11.5px;color:var(--muted)">
+      parser → total ${d.total === null ? "<span style='color:var(--muted)'>none on this document</span>" : "<b style='color:var(--ink)'>" + money(d.total) + "</b>"}</div>`;
+  seen.push(d);
+  setTimeout(repaint, dur(420));
+}
+
+function repaint() {
+  const d = seen[seen.length - 1];
+  if (d) {
+    const v = decide(d);
+    $("#verdict").innerHTML =
+      `<span class="pill" style="font-size:13px;padding:5px 14px;border-width:2px;color:var(${v.colour});border-color:var(${v.colour})">${v.label}</span>
+       <div class="note" style="margin-top:9px">${v.note}</div>`;
+  }
+  $("#pos").innerHTML = OPEN_POS.map((p) => `
+    <div class="po ${d && d.match === p.po ? "hit" : ""}">
+      <span><b class="mono" style="font-size:11.5px">${p.po}</b> &nbsp;${p.supplier}
+        <span style="color:var(--muted)">— ${p.what}</span></span>
+      <span class="tick">${money(p.amount)}</span></div>`).join("");
+
+  const c = { filed: 0, appr: 0, held: 0 };
+  seen.forEach((x) => { c[decide(x).k]++; });
+  setStat("docs", seen.length); setStat("filed", c.filed);
+  setStat("appr", c.appr); setStat("held", c.held);
+  $("#limv").textContent = "$" + limit.toLocaleString();
+  $("#limnote").innerHTML = `Two different bars are doing two different jobs here. Filing a bill
+    automatically needs <b>0.88</b> confidence, because a mis-filed bill is a payment you cannot see.
+    Chasing a supplier needs <b>0.55</b>, because being wrong costs one email. Same model, same call,
+    different consequences.`;
+
+  $("#table").innerHTML = seen.length ? seen.map((x) => {
+    const v = decide(x);
+    return `<tr><td class="mono" style="font-size:11.5px">${x.name}</td>
+      <td style="font-size:12px;color:var(--muted)">${x.type}</td>
+      <td class="tick">${x.match === "none" ? "—" : x.match}</td>
+      <td class="tick">${x.total === null ? "—" : money(x.total)}</td>
+      <td><span class="pill" style="color:var(${v.colour});border-color:var(${v.colour})">${v.label}</span></td></tr>`;
+  }).join("") : `<tr><td colspan="5" class="note" style="border:0">Nothing yet.</td></tr>`;
+}
+
+const ticker = new Ticker(tick, 2800);
+wireControls({
+  ticker, playBtn: $("#play"), stepBtn: $("#step"), resetBtn: $("#reset"), speedInput: $("#speed"),
+  onReset() {
+    i = 0; seen = [];
+    $("#doc").innerHTML = "Press <b>Play</b>.";
+    $("#checks").innerHTML = `<p class="note" style="margin:0">Nothing yet.</p>`;
+    $("#verdict").innerHTML = "";
+    repaint();
+  },
+});
+
+$("#lim").addEventListener("input", (e) => { limit = +e.target.value; repaint(); });
+repaint();
+</script>
+</body>
+</html>

@@ -4,7 +4,7 @@
 
 **A working engineer's playground for Jev — TypeSafe's System One model.**
 
-Runnable cookbooks, a plain-English guide, and six interactive simulations of what a
+Runnable cookbooks, a plain-English guide, and ten interactive simulations of what a
 fast, calibrated, *typed* decision model changes about your architecture — including
 inside systems you already built around OpenAI, Claude, or Gemini.
 
@@ -24,21 +24,42 @@ inside systems you already built around OpenAI, Claude, or Gemini.
 
 ## See it before you read it
 
-Six interactive simulations, built so a non-technical colleague can follow the flow.
+Ten interactive simulations, built so a non-technical colleague can follow the flow.
 **No install, no API key, nothing is actually called.** Press play, drag a threshold,
-watch the routing change.
+watch the routing change. Every page links straight to the Python it is built from.
 
 <a href="https://exponen-agi.github.io/jev-playground/01-triage-cascade.html">
   <img src="docs/demo.gif" alt="Support tickets flowing through Jev and fanning out to a database lookup, two specialist AI prompts, and a human queue" width="100%">
 </a>
 
+**Customer conversations** — messages from people who want something
+
 | | Simulation | What it shows | Try |
 |---|---|---|---|
 | **01** | [Support triage cascade](https://exponen-agi.github.io/jev-playground/01-triage-cascade.html) | Most tickets never reach an expensive model | Drag the confidence floor |
+| **07** | [The shared inbox](https://exponen-agi.github.io/jev-playground/07-inbox-triage.html) | One mailbox, sorted onto the right desk before anyone opens it | Raise the floor, watch the owner's pile grow |
+| **04** | [The second pair of eyes](https://exponen-agi.github.io/jev-playground/04-output-verifier.html) | Checking a chatbot's reply before it sends | Step through four drafts |
+
+**Sales and orders** — the front of the business
+
+| | Simulation | What it shows | Try |
+|---|---|---|---|
+| **05** | [Scoring while they wait](https://exponen-agi.github.io/jev-playground/05-lead-scoring.html) | AI inside a form submit, under 200ms | Re-weight the formula |
+| **08** | [Orders by WhatsApp](https://exponen-agi.github.io/jev-playground/08-order-intake.html) | Jev judges the message, a regex reads the number | Set the bar for acting without a person |
+
+**Money and paperwork** — the back-office grind
+
+| | Simulation | What it shows | Try |
+|---|---|---|---|
+| **09** | [The bill that just arrived](https://exponen-agi.github.io/jev-playground/09-invoice-intake.html) | Matching a bill against your own open orders | Drag the approval limit |
+| **10** | [A month of transactions](https://exponen-agi.github.io/jev-playground/10-bookkeeping.html) | Calibration as the product: which rows a person still reads | Move the floor, watch accuracy move with it |
+
+**Around the models you already run** — screening, checking, routing
+
+| | Simulation | What it shows | Try |
+|---|---|---|---|
 | **02** | [The gatekeeper](https://exponen-agi.github.io/jev-playground/02-rag-gatekeeper.html) | Screening documents before RAG, injection included | Raise the relevance bar |
 | **03** | [The checkpoint](https://exponen-agi.github.io/jev-playground/03-agent-guardrails.html) | Gating an AI agent's tool calls on four hazards | Move each hazard limit |
-| **04** | [The second pair of eyes](https://exponen-agi.github.io/jev-playground/04-output-verifier.html) | Checking a chatbot's reply before it sends | Step through four drafts |
-| **05** | [Scoring while they wait](https://exponen-agi.github.io/jev-playground/05-lead-scoring.html) | AI inside a form submit, under 200ms | Re-weight the formula |
 | **06** | [Picking the right brain](https://exponen-agi.github.io/jev-playground/06-model-router.html) | Routing across GPT, Claude, Gemini — or no model | Watch the split |
 
 > Prefer to run them locally? `git clone`, then open `simulations/index.html`.
@@ -587,6 +608,8 @@ flowchart LR
     VERIFY -->|"ungrounded"| HUMAN
 ```
 
+*Patterns that sit around the models you already run:*
+
 | # | Cookbook | What it combines | The point |
 |---|---|---|---|
 | [01](./cookbooks/01_triage_cascade.py) | **Support triage cascade** | Jev → code \| specialist LLM \| human | One branch never touches a model. Two load *different* specialists — a narrow prompt beats a general one. One escalates honestly. |
@@ -595,6 +618,16 @@ flowchart LR
 | [04](./cookbooks/04_output_verifier.py) | **LLM output verifier** | LLM generates → Jev judges before it ships | Grounding, citation checking, policy, tone. The generator and the judge should not be the same model. |
 | [05](./cookbooks/05_realtime_lead_scoring.py) | **Real-time scoring** | Jev in the request path → LLM only for the top tier | AI inside a user-facing request, where a three-second model call was never an option. Weights live in your code, with a diff and a test. |
 | [06](./cookbooks/06_model_router.py) | **Cross-provider router** | Jev picks GPT vs Claude vs Gemini vs nothing | Route by what the task *needs*, not by which key you configured first. Re-weighting is a code change. |
+
+*Patterns for a business that does not have an AI team — the sorting work someone is
+currently doing by hand, every day:*
+
+| # | Cookbook | What it combines | The point |
+|---|---|---|---|
+| [07](./cookbooks/07_inbox_triage.py) | **The shared inbox** | Jev routes → template \| LLM draft \| a person | Six judgements on every message in `info@`. The confidence floor is the owner's "when in doubt, ask me", written down as a number. |
+| [08](./cookbooks/08_order_intake.py) | **Orders by WhatsApp** | Jev judges → a regex parses → code reconciles | Jev has no "extract a number" primitive, and that is a feature. It says whether a quantity is *there*; a regex says what it is; disagreement routes to a human. |
+| [09](./cookbooks/09_invoice_intake.py) | **Bills and invoices** | Jev matches against your open orders → LLM chases | "Does this bill match something we ordered?" is a question about your data, not about language. Your ledger goes into the call as state. |
+| [10](./cookbooks/10_bookkeeping.py) | **Bank transactions** | Jev categorises at scale → LLM writes the month-end note | The one where calibration *is* the product — and the one cookbook that ships a `calibration_report()` to check the confidence number against your own history before trusting it. |
 
 **Start here:** [`cookbooks/README.md`](./cookbooks/README.md)
 
