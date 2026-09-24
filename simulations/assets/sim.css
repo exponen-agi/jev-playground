@@ -2,7 +2,7 @@
 :root {
   --bg: #fbfbfd;        --panel: #ffffff;     --ink: #14141a;
   --muted: #5d5d6e;     --line: #e4e4ec;      --line-soft: #f0f0f6;
-  --jev: #d63c9e;       --llm: #5b5bd6;       --code: #0d9e70;
+  --jev: #d63c9e;       --on-jev: #fff;       --llm: #5b5bd6;       --code: #0d9e70;
   --human: #d98207;     --danger: #dc3b3b;    --shadow: 0 1px 2px rgba(20,20,40,.06), 0 8px 24px rgba(20,20,40,.05);
   --r: 12px;            --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
   --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, Helvetica, Arial, sans-serif;
@@ -11,14 +11,14 @@
   :root:not([data-theme="light"]) {
     --bg: #0e0e13;      --panel: #17171f;     --ink: #ecedf2;
     --muted: #9a9aad;   --line: #2a2a37;      --line-soft: #21212c;
-    --jev: #f472c0;     --llm: #8b8bf0;       --code: #34d3a0;
+    --jev: #f472c0;     --on-jev: #14141a;    --llm: #8b8bf0;       --code: #34d3a0;
     --human: #f0a93a;   --danger: #f16a6a;    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.3);
   }
 }
 :root[data-theme="dark"] {
   --bg: #0e0e13;        --panel: #17171f;     --ink: #ecedf2;
   --muted: #9a9aad;     --line: #2a2a37;      --line-soft: #21212c;
-  --jev: #f472c0;       --llm: #8b8bf0;       --code: #34d3a0;
+  --jev: #f472c0;       --on-jev: #14141a;    --llm: #8b8bf0;       --code: #34d3a0;
   --human: #f0a93a;     --danger: #f16a6a;    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.3);
 }
 
@@ -106,7 +106,33 @@ table.rows td { padding: 7px 8px; border-bottom: 1px solid var(--line-soft); ver
 .repo-link:focus-visible { outline: 2px solid var(--jev); outline-offset: 2px; }
 .repo-link svg { width: 16px; height: 16px; fill: currentColor; flex: none; }
 .repo-link .mono { font-family: var(--mono); font-size: 11.5px; }
-@media (max-width: 560px) { .repo-link .label { display: none; } }
+/* the one header link we want read first: filled, and keeps its label on phones */
+.repo-link.primary { background: var(--jev); border-color: var(--jev); color: var(--on-jev); font-weight: 600; }
+.repo-link.primary:hover { color: var(--on-jev); filter: brightness(1.08); }
+@media (max-width: 560px) { .repo-link:not(.primary) .label { display: none; } }
+
+/* ---- featured article callout on the landing page ---- */
+.feature {
+  display: flex; align-items: center; gap: 16px; margin: -6px 0 30px; max-width: 760px;
+  padding: 16px 18px; text-decoration: none; color: inherit;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--jev) 10%, var(--panel)), var(--panel) 70%);
+  border: 1px solid color-mix(in srgb, var(--jev) 40%, var(--line));
+  border-left: 4px solid var(--jev); border-radius: var(--r); box-shadow: var(--shadow);
+  transition: transform .16s, border-color .16s;
+}
+.feature:hover { transform: translateY(-2px); border-color: var(--jev); }
+.feature:focus-visible { outline: 2px solid var(--jev); outline-offset: 3px; }
+.feature .icon {
+  flex: none; width: 40px; height: 40px; border-radius: 10px; display: grid; place-items: center;
+  background: var(--jev); color: var(--on-jev);
+}
+.feature .icon svg { width: 20px; height: 20px; fill: currentColor; }
+.feature .kicker { font-family: var(--mono); font-size: 11px; font-weight: 700; letter-spacing: .08em;
+                   text-transform: uppercase; color: var(--jev); }
+.feature .title { display: block; font-size: 16px; font-weight: 650; line-height: 1.35; margin: 2px 0 3px; }
+.feature .sub { display: block; font-size: 13px; color: var(--muted); }
+.feature .go { flex: none; margin-left: auto; font-size: 13px; font-weight: 600; color: var(--jev); white-space: nowrap; }
+@media (max-width: 560px) { .feature .icon, .feature .go { display: none; } }
 
 /* ---- grouped cards on the landing page ---- */
 .group { margin: 0 0 30px; }
