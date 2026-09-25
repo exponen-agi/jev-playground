@@ -3,8 +3,149 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Jev and System One models: a working engineer's guide</title>
-<meta name="description" content="What a System One model is, why type safety is structural rather than statistical, what calibration buys you architecturally, where Jev breaks, and four use cases with code.">
+<title>Jev and System One Models: A Working Engineer's Guide</title>
+<meta name="description" content="What System One models like Jev are, why their type safety is structural, how RLCD calibration changes architecture, where Jev breaks, and four use cases with code.">
+<meta name="robots" content="index, follow, max-image-preview:large">
+<link rel="canonical" href="https://exponen-agi.github.io/jev-playground/article-jev-system-one.html">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="jev-playground">
+<meta property="og:title" content="Jev and System One Models: A Working Engineer's Guide">
+<meta property="og:description" content="What System One models like Jev are, why their type safety is structural, how RLCD calibration changes architecture, where Jev breaks, and four use cases with code.">
+<meta property="og:url" content="https://exponen-agi.github.io/jev-playground/article-jev-system-one.html">
+<meta property="og:image" content="https://exponen-agi.github.io/jev-playground/assets/og-article.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Jev and System One models: a working engineer's guide">
+<meta property="article:published_time" content="2026-09-21">
+<meta property="article:section" content="AI engineering">
+<meta property="article:tag" content="Jev">
+<meta property="article:tag" content="System One models">
+<meta property="article:tag" content="LLM cost optimisation">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Jev and System One Models: A Working Engineer's Guide">
+<meta name="twitter:description" content="What System One models like Jev are, why their type safety is structural, how RLCD calibration changes architecture, where Jev breaks, and four use cases with code.">
+<meta name="twitter:image" content="https://exponen-agi.github.io/jev-playground/assets/og-article.png">
+<meta name="theme-color" content="#d63c9e">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "TechArticle",
+      "@id": "https://exponen-agi.github.io/jev-playground/article-jev-system-one.html#article",
+      "headline": "Jev and System One models: a working engineer's guide to typed, calibrated AI decisions",
+      "description": "What System One models like Jev are, why their type safety is structural, how RLCD calibration changes architecture, where Jev breaks, and four use cases with code.",
+      "url": "https://exponen-agi.github.io/jev-playground/article-jev-system-one.html",
+      "mainEntityOfPage": "https://exponen-agi.github.io/jev-playground/article-jev-system-one.html",
+      "image": "https://exponen-agi.github.io/jev-playground/assets/og-article.png",
+      "datePublished": "2026-09-21",
+      "dateModified": "2026-09-24",
+      "inLanguage": "en",
+      "wordCount": 4664,
+      "timeRequired": "PT24M",
+      "proficiencyLevel": "Expert",
+      "about": [
+        {
+          "@type": "Thing",
+          "name": "Jev"
+        },
+        {
+          "@type": "Thing",
+          "name": "System One model"
+        },
+        {
+          "@type": "Thing",
+          "name": "Calibrated AI decisions"
+        }
+      ],
+      "author": {
+        "@type": "Organization",
+        "name": "exponen-agi",
+        "url": "https://github.com/exponen-agi"
+      },
+      "publisher": {
+        "@type": "Organization",
+        "name": "exponen-agi",
+        "url": "https://github.com/exponen-agi"
+      },
+      "isPartOf": {
+        "@id": "https://exponen-agi.github.io/jev-playground/#website"
+      }
+    },
+    {
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        {
+          "@type": "ListItem",
+          "position": 1,
+          "name": "Simulations",
+          "item": "https://exponen-agi.github.io/jev-playground/"
+        },
+        {
+          "@type": "ListItem",
+          "position": 2,
+          "name": "Jev and System One models",
+          "item": "https://exponen-agi.github.io/jev-playground/article-jev-system-one.html"
+        }
+      ]
+    },
+    {
+      "@type": "FAQPage",
+      "@id": "https://exponen-agi.github.io/jev-playground/article-jev-system-one.html#faq",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "What is a System One model?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "A System One model is a class of AI model that evaluates a state and returns typed answers with calibrated probabilities, rather than generating text. TypeSafe named the class after Daniel Kahneman's System 1 — fast, intuitive judgement — as distinct from the slow, deliberate System 2 reasoning that chat and reasoning models perform. Jev is TypeSafe's first System One model, released in early access on 15 September 2026."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How is Jev different from an LLM with structured outputs?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Three differences matter. First, sampling: an LLM generates tokens one at a time, each conditioned on the last, while Jev evaluates every question in a request in parallel in a single pass. Second, the output space: an LLM emits a string that must be parsed and validated, and can fail that validation, whereas Jev's answer space is defined in advance so schema mismatch is impossible by construction rather than by retry. Third, training: Jev is trained with Reinforcement Learning for Calibrated Decisions, which optimises its probabilities against outcomes, so its confidence numbers are meaningful in aggregate rather than a number the model was asked to guess about itself."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What can Jev not do?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "It cannot generate text, code or explanations, and it has no knowledge of the world beyond the state you hand it — it cannot look anything up. TypeSafe's own jaggedness page for jev-1.13 also documents that it is unreliable at counting, arithmetic, date comparison and numeric representations such as hex colour values, that it reads instructions literally rather than inferring intent, and that accuracy falls as the state fills with material the question does not need. Text only: no image, audio or video input."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What does Jev cost, and how fast is it?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "TypeSafe prices jev-1.13 at $0.042 per million input tokens — $42 per billion — with output tokens free, and reports end-to-end response times of 70 to 500 milliseconds against 3 to 329 seconds for frontier models on comparable queries. The company's headline figures of 193.6x faster and 444.6x cheaper come from its own workflow evaluations. These are vendor-reported numbers, self-run and not yet independently reproduced, so treat them as a reason to benchmark rather than as a benchmark."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Should Jev replace the LLM in our stack?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "No, and TypeSafe does not claim it should. Jev has no generative capability at all, so anything that has to produce prose, code or a customer-facing reply still needs a generative model. The productive framing is a cascade: Jev makes the fast, structured decision about what should happen next — which bucket, how severe, whether to escalate — and a generative model is invoked only on the branches that genuinely need one. The saving comes from the calls you stop making, not from swapping one model for another."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How do we pilot it responsibly?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Pick one high-volume, low-stakes decision you already make with an LLM or a brittle rule, and shadow it: run Jev alongside the incumbent, log both answers plus Jev's confidence, and change no behaviour for a week or two. That gives you a calibration curve on your own data — accuracy bucketed by confidence — which is the only thing that tells you where to set your automation threshold. Then automate the high-confidence band, route the rest as you do today, and expand the band as the evidence supports it."
+          }
+        }
+      ]
+    }
+  ]
+}
+</script>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%278%27 fill=%27%23d63c9e%27/%3E%3Cpath d=%27M20 8v11a5 5 0 0 1-9 3%27 stroke=%27white%27 stroke-width=%273%27 fill=%27none%27 stroke-linecap=%27round%27/%3E%3C/svg%3E">
 <link rel="stylesheet" href="assets/sim.css">
 <style>
@@ -51,11 +192,12 @@
 </style>
 </head>
 <body>
-<div class="wrap article">
-  <a class="back" href="index.html">← all simulations</a>
+<main class="wrap article">
+<article>
+  <nav aria-label="Breadcrumb"><a class="back" href="index.html">← all simulations</a></nav>
   <div class="top"><span class="eyebrow">Article</span></div>
   <h1>Jev and System One models: a working engineer's guide to typed, calibrated AI decisions</h1>
-  <p class="meta">21 September 2026 · 24 min read</p>
+  <p class="meta"><time datetime="2026-09-21">21 September 2026</time> · 24 min read</p>
 
   <p class="lede">A new model shipped on 15 September 2026 that is worth an engineer's attention
   for an unusual reason: it is deliberately worse than the models you already use. It cannot
@@ -689,7 +831,7 @@ else:
   <div class="panel" style="margin-top:30px">
     <h2 style="margin:0 0 10px; padding:0; border:0; font-size:14px">See the patterns run</h2>
     <p class="note" style="margin:0">The four use cases above are the same shapes animated in the
-    <a href="index.html">six simulations</a>, each matching runnable Python in <code>cookbooks/</code>.</p>
+    <a href="index.html">ten Jev simulations</a>, each matching runnable Python in <code>cookbooks/</code>.</p>
   </div>
 
   <p class="sources">Sources: TypeSafe's launch post, <i>Introducing System One Models and Jev</i>;
@@ -697,6 +839,7 @@ else:
   pages; and LangChain's <i>Building a Harness with Jev</i>. Performance and pricing figures are
   TypeSafe's own, published on 15 September 2026 and not independently reproduced at the time of
   writing.</p>
-</div>
+</article>
+</main>
 </body>
 </html>
