@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
   <url><loc>https://exponen-agi.github.io/jev-playground/</loc><lastmod>2026-09-24</lastmod></url>
   <url><loc>https://exponen-agi.github.io/jev-playground/01-triage-cascade.html</loc><lastmod>2026-09-24</lastmod></url>
   <url><loc>https://exponen-agi.github.io/jev-playground/02-rag-gatekeeper.html</loc><lastmod>2026-09-24</lastmod></url>
@@ -11,5 +12,7 @@
   <url><loc>https://exponen-agi.github.io/jev-playground/08-order-intake.html</loc><lastmod>2026-09-24</lastmod></url>
   <url><loc>https://exponen-agi.github.io/jev-playground/09-invoice-intake.html</loc><lastmod>2026-09-24</lastmod></url>
   <url><loc>https://exponen-agi.github.io/jev-playground/10-bookkeeping.html</loc><lastmod>2026-09-24</lastmod></url>
-  <url><loc>https://exponen-agi.github.io/jev-playground/article-jev-system-one.html</loc><lastmod>2026-09-24</lastmod></url>
+  <url><loc>https://exponen-agi.github.io/jev-playground/article-jev-system-one.html</loc><lastmod>2026-09-25</lastmod>
+    <image:image><image:loc>https://exponen-agi.github.io/jev-playground/assets/article-hero.jpg</image:loc></image:image>
+  </url>
 </urlset>
