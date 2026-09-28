@@ -12,10 +12,12 @@
 <meta property="og:title" content="Jev and System One Models: A Working Engineer's Guide">
 <meta property="og:description" content="What System One models like Jev are, why their type safety is structural, how RLCD calibration changes architecture, where Jev breaks, and four use cases with code.">
 <meta property="og:url" content="https://exponen-agi.github.io/jev-playground/article-jev-system-one.html">
-<meta property="og:image" content="https://exponen-agi.github.io/jev-playground/assets/og-article.png">
+<meta property="og:image" content="https://exponen-agi.github.io/jev-playground/assets/og-article.jpg">
+<meta property="og:image:secure_url" content="https://exponen-agi.github.io/jev-playground/assets/og-article.jpg">
+<meta property="og:image:type" content="image/jpeg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="Jev and System One models: a working engineer's guide">
+<meta property="og:image:alt" content="Typed, calibrated AI decisions: real-world input becomes a structured state, and Jev returns a Choice, a Score or a Noul probability.">
 <meta property="article:published_time" content="2026-09-21">
 <meta property="article:section" content="AI engineering">
 <meta property="article:tag" content="Jev">
@@ -24,7 +26,10 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Jev and System One Models: A Working Engineer's Guide">
 <meta name="twitter:description" content="What System One models like Jev are, why their type safety is structural, how RLCD calibration changes architecture, where Jev breaks, and four use cases with code.">
-<meta name="twitter:image" content="https://exponen-agi.github.io/jev-playground/assets/og-article.png">
+<meta name="twitter:image" content="https://exponen-agi.github.io/jev-playground/assets/og-article.jpg">
+<meta name="twitter:image:alt" content="Typed, calibrated AI decisions: real-world input becomes a structured state, and Jev returns a Choice, a Score or a Noul probability.">
+<link rel="preload" as="image" href="assets/article-hero.webp" type="image/webp"
+      imagesrcset="assets/article-hero-836.webp 836w, assets/article-hero.webp 1672w" imagesizes="(max-width: 720px) 100vw, 640px">
 <meta name="theme-color" content="#d63c9e">
 <script type="application/ld+json">
 {
@@ -37,9 +42,26 @@
       "description": "What System One models like Jev are, why their type safety is structural, how RLCD calibration changes architecture, where Jev breaks, and four use cases with code.",
       "url": "https://exponen-agi.github.io/jev-playground/article-jev-system-one.html",
       "mainEntityOfPage": "https://exponen-agi.github.io/jev-playground/article-jev-system-one.html",
-      "image": "https://exponen-agi.github.io/jev-playground/assets/og-article.png",
+      "image": [
+        {
+          "@type": "ImageObject",
+          "@id": "https://exponen-agi.github.io/jev-playground/article-jev-system-one.html#hero",
+          "url": "https://exponen-agi.github.io/jev-playground/assets/article-hero.jpg",
+          "contentUrl": "https://exponen-agi.github.io/jev-playground/assets/article-hero.jpg",
+          "width": 1672,
+          "height": 941,
+          "caption": "Typed, calibrated AI decisions: real-world input becomes a structured state, and Jev returns a Choice, a Score or a Noul probability.",
+          "description": "Diagram: real-world input (unstructured data, complex context, multiple sources) is turned into a structured state of context, constraints, goals and data. From that state Jev returns three kinds of typed answer: a Choice between discrete options (A, B or C, with B selected), a calibrated Score on a 0 to 1 scale, and a Noul, a calibrated yes-or-no probability shown as 0.82. The flow runs from any data to structured understanding, typed decisions and safer outcomes."
+        },
+        {
+          "@type": "ImageObject",
+          "url": "https://exponen-agi.github.io/jev-playground/assets/og-article.jpg",
+          "width": 1200,
+          "height": 630
+        }
+      ],
       "datePublished": "2026-09-21",
-      "dateModified": "2026-09-24",
+      "dateModified": "2026-09-25",
       "inLanguage": "en",
       "wordCount": 4664,
       "timeRequired": "PT24M",
@@ -70,7 +92,8 @@
       },
       "isPartOf": {
         "@id": "https://exponen-agi.github.io/jev-playground/#website"
-      }
+      },
+      "thumbnailUrl": "https://exponen-agi.github.io/jev-playground/assets/article-hero-836.jpg"
     },
     {
       "@type": "BreadcrumbList",
@@ -189,6 +212,12 @@
   .faq[open] summary { border-bottom-color: transparent; }
   .faq > p { padding: 4px 0 12px; border-bottom: 1px solid var(--line-soft); margin: 0; }
   .sources { font-size: 13px; color: var(--muted); }
+  .hero { margin: 0 0 26px; }
+  .hero img {
+    display: block; width: 100%; height: auto; border-radius: var(--r);
+    border: 1px solid var(--line); box-shadow: var(--shadow); background: #fafcfe;
+  }
+  .hero figcaption { margin-top: 8px; font-size: 13px; color: var(--muted); }
 </style>
 </head>
 <body>
@@ -198,6 +227,19 @@
   <div class="top"><span class="eyebrow">Article</span></div>
   <h1>Jev and System One models: a working engineer's guide to typed, calibrated AI decisions</h1>
   <p class="meta"><time datetime="2026-09-21">21 September 2026</time> · 24 min read</p>
+
+  <figure class="hero">
+    <picture>
+      <source type="image/webp" srcset="assets/article-hero-836.webp 836w, assets/article-hero.webp 1672w"
+              sizes="(max-width: 720px) 100vw, 640px">
+      <img src="assets/article-hero.jpg" srcset="assets/article-hero-836.jpg 836w, assets/article-hero.jpg 1672w"
+           sizes="(max-width: 720px) 100vw, 640px" width="1672" height="941"
+           fetchpriority="high" decoding="async" itemprop="image"
+           alt="Diagram: real-world input (unstructured data, complex context, multiple sources) is turned into a structured state of context, constraints, goals and data. From that state Jev returns three kinds of typed answer: a Choice between discrete options (A, B or C, with B selected), a calibrated Score on a 0 to 1 scale, and a Noul, a calibrated yes-or-no probability shown as 0.82. The flow runs from any data to structured understanding, typed decisions and safer outcomes.">
+    </picture>
+    <figcaption>From real-world data to reliable actions: one structured state, three typed answers
+    (Choice, Score, Noul), each with a calibrated confidence your code can act on.</figcaption>
+  </figure>
 
   <p class="lede">A new model shipped on 15 September 2026 that is worth an engineer's attention
   for an unusual reason: it is deliberately worse than the models you already use. It cannot
