@@ -68,3 +68,52 @@ export function setStat(key, value, note) {
 /** Respect reduced-motion for the decorative transitions. */
 export const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 export const dur = (ms) => (reduced ? 0 : ms);
+
+/* ---- agentic pages: code panel and travelling dots ---- */
+
+const esc = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+function highlightPy(s) {
+  const re = /(#.*$)|("[^"]*"|'[^']*')|(\b\d+(?:\.\d+)?\b)|(\b(?:def|return|if|elif|else|for|in|and|or|not|while|break|continue|None|True|False|with|as)\b)/g;
+  let out = "", last = 0, m;
+  while ((m = re.exec(s))) {
+    const cls = m[1] ? "tc" : m[2] ? "ts" : m[3] ? "tn" : "tk";
+    out += esc(s.slice(last, m.index)) + `<span class="${cls}">${esc(m[0])}</span>`;
+    last = re.lastIndex;
+  }
+  return out + esc(s.slice(last));
+}
+
+/**
+ * Renders Python into a <pre class="code">. A line ending in `#@tag` (or `#@a,b`) gets
+ * those tags, which markCode() lights up when the simulation takes that branch. The
+ * tag itself is stripped from what the reader sees.
+ */
+export function renderCode(el, src) {
+  const lines = src.replace(/^\s*\n/, "").replace(/\s+$/, "").split("\n");
+  const indent = Math.min(...lines.filter((l) => l.trim()).map((l) => l.match(/^ */)[0].length));
+  el.innerHTML = lines.map((raw) => {
+    const m = raw.match(/\s*#@([\w,-]+)\s*$/);
+    const line = (m ? raw.slice(0, m.index) : raw).slice(indent);
+    return `<span class="ln" data-tags="${m ? m[1] : ""}">${highlightPy(line) || " "}</span>`;
+  }).join("");
+}
+
+/** Highlights every line carrying any of `tags`; call with no tags to clear. */
+export function markCode(el, ...tags) {
+  el.querySelectorAll(".ln").forEach((ln) => {
+    const own = ln.dataset.tags.split(",");
+    ln.classList.toggle("on", tags.some((t) => own.includes(t)));
+  });
+}
+
+/** Sends a dot along an SVG path. Decorative only: state never waits on it. */
+export function travel(svg, path, colour, { ms = 700, delay = 0, r = 6.5 } = {}) {
+  if (!path) return;
+  const len = path.getTotalLength();
+  const at = (u) => { const p = path.getPointAtLength(u * len); return `translate(${p.x},${p.y})`; };
+  const dot = svg.append("circle").attr("r", r).attr("fill", colour).attr("opacity", 0).attr("transform", at(0));
+  dot.transition().delay(dur(delay)).duration(0).attr("opacity", 1)
+    .transition().duration(dur(ms)).ease(d3.easeCubicInOut).attrTween("transform", () => at)
+    .transition().duration(dur(170)).attr("r", r * 1.8).attr("opacity", 0).remove();
+}
