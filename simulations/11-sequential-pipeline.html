@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sequential Agent Pipeline</title>
+<meta name="description" content="Three LLM agents handle an insurance claim in sequence. Jev checks every handoff: pass it on, send it back once, or stop the line for a person.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%278%27 fill=%27%23d63c9e%27/%3E%3Cpath d=%27M20 8v11a5 5 0 0 1-9 3%27 stroke=%27white%27 stroke-width=%273%27 fill=%27none%27 stroke-linecap=%27round%27/%3E%3C/svg%3E">
+<link rel="stylesheet" href="assets/sim.css">
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="agentic.html">← agentic systems</a>
+  <div class="top"><span class="eyebrow">Agentic · Sequential · Cookbook 11</span>
+    <span class="top-links">
+      <a class="repo-link" href="https://github.com/exponen-agi/jev-playground/blob/main/cookbooks/11_sequential_pipeline.py"
+         aria-label="View the Python source for cookbook 11 on GitHub">
+        <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M4.72 3.22a.75.75 0 0 1 1.06 1.06L2.06 8l3.72 3.72a.75.75 0 1 1-1.06 1.06L.47 8.53a.75.75 0 0 1 0-1.06l4.25-4.25Zm6.56 0a.75.75 0 1 0-1.06 1.06L13.94 8l-3.72 3.72a.75.75 0 1 0 1.06 1.06l4.25-4.25a.75.75 0 0 0 0-1.06l-4.25-4.25Z"></path></svg><span class="label">The Python</span> <span class="mono">11_sequential_pipeline.py</span>
+      </a>
+    </span>
+  </div>
+  <h1>Three desks, one claim</h1>
+  <p class="lede">Three AI agents handle an insurance claim, one after another. One summarises the
+  email, one decides whether it is covered, and one writes to the customer. Each agent only sees
+  what the one before it wrote, so a detail invented at the first desk ends up in the letter. Jev
+  checks every handoff, and the claim either moves on, goes back to the same desk once, or stops
+  for a person.</p>
+
+  <div class="panel">
+    <div class="controls">
+      <button id="play" class="primary">▶  Play</button>
+      <button id="step">Step</button>
+      <button id="reset">Reset</button>
+      <div class="spacer"></div>
+      <label class="ctl">Grounding bar <input id="bar" type="range" min="0.5" max="0.95" step="0.05" value="0.8"><span class="val" id="bar-v">0.80</span></label>
+      <label class="ctl">Retries <input id="retries" type="range" min="0" max="2" step="1" value="1"><span class="val" id="retries-v">1</span></label>
+      <label class="ctl">Speed <input id="speed" type="range" min="0.5" max="4" step="0.5" value="1"></label>
+    </div>
+    <div class="stage-scroll"><svg id="stage" viewBox="0 0 960 370" role="img"
+         aria-label="Claims pass through an intake agent, an assessor agent and a letter agent. A Jev gate after each one passes the claim on, sends it back to the same agent, or sends it to a person."></svg></div>
+    <div class="legend">
+      <span><i style="background:var(--llm)"></i>LLM agent doing the work</span>
+      <span><i style="background:var(--jev)"></i>Jev gate: one call per handoff</span>
+      <span><i style="background:var(--human)"></i>A person</span>
+      <span><i style="background:var(--danger)"></i>A flaw that got past the gate</span>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="panel">
+      <h2>This claim <span class="sub" id="claim-title"></span></h2>
+      <div id="email" style="font-size:13.5px;background:var(--bg);border:1px solid var(--line);
+           border-radius:9px;padding:12px;min-height:48px">Press <b>Play</b>.</div>
+      <ul class="log" id="log" style="margin-top:10px"></ul>
+    </div>
+    <div class="panel">
+      <h2>So far</h2>
+      <div class="stats">
+        <div class="stat" data-stat="sent"><div class="k">Sent</div><div class="v">0</div><div class="n">no person needed</div></div>
+        <div class="stat" data-stat="retries"><div class="k">Retries</div><div class="v">0</div><div class="n">sent back once</div></div>
+        <div class="stat" data-stat="person"><div class="k">To a person</div><div class="v">0</div><div class="n">line stopped</div></div>
+        <div class="stat" data-stat="leaks"><div class="k">Flaws missed</div><div class="v">0</div><div class="n">reached the customer</div></div>
+        <div class="stat" data-stat="jev"><div class="k">Gate time</div><div class="v">0.0s</div><div class="n">Jev, all gates</div></div>
+        <div class="stat" data-stat="llm"><div class="k">LLM judge</div><div class="v">0s</div><div class="n">same gates</div></div>
+      </div>
+      <p class="note" id="verdict">Move the <b>grounding bar</b>. Set it too low and a made-up fact gets through.
+      Set it too high and good work gets sent back until it ends up with a person. Every claim
+      processed so far is re-checked at the new setting.</p>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="panel">
+      <h2>The code <span class="sub">· lines this claim ran are highlighted</span></h2>
+      <pre class="code" id="code"></pre>
+    </div>
+    <div class="panel">
+      <h2>Every claim so far <span class="sub">· at the current settings</span></h2>
+      <div class="table-scroll"><table class="rows" id="table">
+        <thead><tr><th>Claim</th><th>Intake</th><th>Assessor</th><th>Letter</th><th>Outcome</th></tr></thead>
+        <tbody></tbody>
+      </table></div>
+    </div>
+  </div>
+
+  <p class="note">The numbers are illustrative, not measured. Gate time assumes about 0.25s per Jev call and about 4s per
+  LLM-judge call. Next: <a href="12-parallel-fanout.html">12 · Four specialists, one verdict</a> →</p>
+</div>
+
+<script type="text/plain" id="py">
+GROUNDED_BAR = {BAR}      # the slider
+MAX_RETRIES = {RETRIES}
+
+for stage in PIPELINE:
+    feedback = ""
+    for attempt in range(MAX_RETRIES + 1):
+        out = stage.agent.run(given + feedback)  # LLM works
+        a = jev.system_one(                          #@jev
+            state={"input": given, "output": out},   #@jev
+            questions=GATE).answers                  #@jev
+        if stage.is_intake and a["story"].noul > 0.6:  #@story
+            return to_person("investigator")       #@story
+        if a["grounded"].noul < GROUNDED_BAR:      #@grounded
+            feedback = FEEDBACK["grounded"]; continue  #@grounded
+        if a["complete"].score < 1.2:              #@complete
+            feedback = FEEDBACK["complete"]; continue  #@complete
+        if stage.is_letter and a["cold"].noul > 0.5:   #@cold
+            feedback = FEEDBACK["cold"]; continue  #@cold
+        break                                      #@pass
+    else:
+        return to_person("still failing")          #@giveup
+    given = out          # the next agent sees only this
+return send(given)                                 #@sent
+</script>
+
+<script src="assets/d3-mini.js"></script>
+<script type="module">
+import { $, Ticker, wireControls, setStat, dur, renderCode, markCode, travel } from "./assets/sim.js";
+
+// Each attempt: g = grounded (Noul), c = complete (Score 0–2), cold = cold_or_blaming,
+// flaw = ground truth for the demo (did this output really contain a mistake?).
+const ok = (g = .94) => ({ g, c: 1.8, cold: .05, flaw: false });
+const CLAIMS = [
+  { t: "Burst pipe", email: "A pipe burst under our kitchen sink on 3 March. Cabinet and floor damaged. Plumber's invoice £180 attached.",
+    story: .06, stages: [[ok(.95)], [ok(.93)], [ok(.96)]] },
+  { t: "Storm, roof tiles", email: "Storm last night took tiles off the roof. Rain is coming into the loft. Nobody has been out yet.",
+    story: .08, stages: [[{ g: .41, c: 1.7, cold: 0, flaw: true, why: "summary added a £2,400 roofer's quote that does not exist" }, ok(.94)], [ok(.92)], [ok(.95)]] },
+  { t: "Laptop theft", email: "Laptop stolen from my locked car on Tuesday at the gym. Actually, from the house on Monday night, I think.",
+    story: .84, stages: [[ok(.9)], [ok()], [ok()]] },
+  { t: "Basement flood", email: "Heavy rain flooded the basement. Carpet and a sofa ruined. We have photos.",
+    story: .1, stages: [[ok(.93)], [{ g: .72, c: 1.7, cold: 0, flaw: true, why: "assessor cited flood cover that this policy excludes" }, ok(.91)], [ok(.94)]] },
+  { t: "Fence blown down", email: "The wind brought our garden fence down on Sunday. Three panels and two posts.",
+    story: .05, stages: [[ok(.95)], [ok(.9)], [{ g: .93, c: 1.8, cold: .71, flaw: true, why: "letter said the fence should have been better maintained" }, ok(.93)]] },
+  { t: "Car hit garage", email: "I reversed into the garage wall. The wall is cracked. The car is fine.",
+    story: .12, stages: [[{ g: .92, c: .9, cold: 0, flaw: true, why: "summary left out the date, which the assessor needs" }, ok(.93)], [ok(.9)], [ok(.95)]] },
+  { t: "Kitchen fire", email: "Pan fire in the kitchen. Extractor hood and ceiling smoke-damaged. Fire brigade attended.",
+    story: .07, stages: [[ok(.94)], [{ g: .58, c: 1.6, cold: 0, flaw: true, why: "assessor promised a hotel stay nobody asked for" },
+                                     { g: .62, c: 1.6, cold: 0, flaw: true, why: "still promising the hotel stay" }, ok(.9)], [ok(.94)]] },
+  { t: "Broken window", email: "A football went through the lounge window yesterday. Glazier quoted £240.",
+    story: .04, stages: [[{ g: .86, c: 1.8, cold: 0, flaw: false }, { g: .88, c: 1.8, cold: 0, flaw: false }, ok(.92)], [ok(.93)], [ok(.94)]] },
+];
+const NAMES = ["intake", "assessor", "letter"];
+const LABEL = { grounded: "not grounded", complete: "incomplete", cold: "cold tone", story: "story contradicts itself" };
+
+// The whole policy, as in the cookbook. Returns what happened at each stage.
+function run(claim, bar, retries) {
+  const out = { stages: [], end: "sent", leaks: 0, retries: 0, needless: 0, gates: 0, tags: new Set(["jev"]) };
+  for (let s = 0; s < 3; s++) {
+    const tries = [];
+    let passed = false;
+    for (let a = 0; a <= retries; a++) {
+      const att = claim.stages[s][Math.min(a, claim.stages[s].length - 1)];
+      out.gates++;
+      if (s === 0 && claim.story > .6) {
+        tries.push({ v: "person", why: "story", att }); out.tags.add("story");
+        out.stages.push(tries); out.end = "person"; out.at = s; out.reason = "claims investigator"; return out;
+      }
+      const fail = att.g < bar ? "grounded" : att.c < 1.2 ? "complete" : s === 2 && att.cold > .5 ? "cold" : null;
+      if (fail) {
+        tries.push({ v: "retry", why: fail, att }); out.tags.add(fail);
+        if (!att.flaw) out.needless++;
+        continue;
+      }
+      tries.push({ v: "pass", att }); out.tags.add("pass");
+      if (att.flaw) out.leaks++;
+      passed = true; break;
+    }
+    out.retries += tries.filter((x) => x.v === "retry").length - (passed ? 0 : 1);
+    out.stages.push(tries);
+    if (!passed) { out.end = "person"; out.at = s; out.reason = "still failing after retries"; out.tags.add("giveup"); return out; }
+  }
+  out.tags.add("sent");
+  return out;
+}
+
+// ------------------------------------------------------------------ drawing
+const svg = d3.select("#stage");
+const Y = 150, SX = [170, 400, 630], GX = [330, 560, 790], PX = 480, PY = 300;
+svg.append("defs").append("marker").attr("id", "a11").attr("viewBox", "0 0 8 8").attr("refX", 7)
+  .attr("refY", 4).attr("markerWidth", 6).attr("markerHeight", 6).attr("orient", "auto")
+  .append("path").attr("d", "M0,0 L8,4 L0,8 Z").attr("fill", "var(--muted)");
+
+const link = (id, d, dash) => svg.append("path").attr("id", id).attr("d", d).attr("fill", "none")
+  .attr("stroke", "var(--line)").attr("stroke-width", 1.8).attr("stroke-dasharray", dash || null)
+  .attr("marker-end", "url(#a11)");
+const box = (x, y, w, h, stroke, fill = "var(--panel)") => svg.append("rect").attr("x", x).attr("y", y)
+  .attr("width", w).attr("height", h).attr("rx", 10).attr("fill", fill).attr("stroke", stroke).attr("stroke-width", 1.5);
+const text = (x, y, s, o = {}) => svg.append("text").attr("x", x).attr("y", y).attr("text-anchor", o.a || "middle")
+  .attr("font-size", o.size || 12).attr("font-weight", o.w || 400).attr("fill", o.fill || "var(--ink)")
+  .attr("font-family", o.mono ? "var(--mono)" : null).text(s);
+
+box(16, Y - 34, 110, 68, "var(--line)", "var(--bg)");
+text(71, Y - 8, "Claims", { w: 600, size: 13 });
+const inboxN = text(71, Y + 18, CLAIMS.length, { size: 19, w: 650, mono: true, fill: "var(--muted)" });
+link("p-in", `M126,${Y} L${SX[0] - 4},${Y}`);
+
+const AG = [["Intake agent", "summarises the email"], ["Assessor agent", "decides the cover"], ["Letter agent", "writes to the customer"]];
+const retryN = [];
+SX.forEach((x, s) => {
+  box(x, Y - 30, 120, 60, "var(--llm)");
+  text(x + 60, Y - 6, AG[s][0], { w: 620, size: 12.5 });
+  text(x + 60, Y + 12, AG[s][1], { size: 10.5, fill: "var(--muted)" });
+  link(`p-s${s}`, `M${x + 120},${Y} L${GX[s] - 26},${Y}`);
+  const next = s < 2 ? SX[s + 1] - 4 : 836;
+  link(`p-g${s}`, `M${GX[s] + 24},${Y} L${next},${Y}`);
+  link(`p-r${s}`, `M${GX[s]},${Y - 24} C${GX[s]},${Y - 96} ${x + 60},${Y - 96} ${x + 60},${Y - 34}`, "4 4");
+  retryN.push(text((GX[s] + x + 60) / 2, Y - 86, "↻ 0", { size: 12, w: 600, fill: "var(--llm)", mono: true }));
+  link(`p-h${s}`, `M${GX[s]},${Y + 24} C${GX[s]},${Y + 100} ${PX},${PY - 80} ${PX},${PY - 24}`, "4 4");
+});
+GX.forEach((x) => {
+  svg.append("rect").attr("x", x - 18).attr("y", Y - 18).attr("width", 36).attr("height", 36).attr("rx", 6)
+    .attr("transform", `rotate(45 ${x} ${Y})`).attr("fill", "var(--jev)");
+  text(x, Y + 4, "Jev", { size: 11, w: 700, fill: "#fff" });
+});
+const pulses = GX.map((x) => svg.append("rect").attr("x", x - 18).attr("y", Y - 18).attr("width", 36).attr("height", 36)
+  .attr("rx", 6).attr("transform", `rotate(45 ${x} ${Y})`).attr("fill", "none").attr("stroke", "var(--jev)")
+  .attr("stroke-width", 3).attr("opacity", 0));
+
+box(840, Y - 34, 104, 68, "var(--code)");
+text(892, Y - 10, "Sent", { w: 620, size: 13 });
+const sentN = text(892, Y + 14, "0", { size: 19, w: 650, mono: true, fill: "var(--code)" });
+const leakN = text(892, Y + 52, "", { size: 11, w: 600, fill: "var(--danger)" });
+
+box(PX - 80, PY - 24, 160, 52, "var(--human)");
+text(PX, PY - 3, "A person", { w: 620, size: 13 });
+const personN = text(PX, PY + 17, "0", { size: 15, w: 650, mono: true, fill: "var(--human)" });
+
+// ------------------------------------------------------------------ state
+const SRC = $("#py").textContent;
+const code = $("#code");
+const bar = () => Number($("#bar").value), retries = () => Number($("#retries").value);
+let i = 0, last = null;
+
+function animate(r) {
+  const el = (id) => document.getElementById(id);
+  const legs = [["p-in", "var(--llm)"]];
+  r.stages.forEach((tries, s) => {
+    tries.forEach((t, a) => {
+      legs.push([`p-s${s}`, "var(--llm)", s]);
+      if (t.v === "retry" && (a < tries.length - 1 || r.end !== "person" || r.at !== s)) legs.push([`p-r${s}`, "var(--llm)"]);
+    });
+    const lastTry = tries[tries.length - 1];
+    if (lastTry.v === "pass") legs.push([`p-g${s}`, lastTry.att.flaw ? "var(--danger)" : "var(--code)"]);
+    else legs.push([`p-h${s}`, "var(--human)"]);
+  });
+  const step = 360;
+  legs.forEach(([id, colour, gate], k) => {
+    travel(svg, el(id), colour, { ms: step, delay: k * step });
+    if (gate !== undefined) pulses[gate].transition().delay(dur((k + 1) * step)).duration(0).attr("opacity", .9)
+      .transition().duration(dur(380)).attr("opacity", 0);
+  });
+}
+
+function describe(r) {
+  const items = [];
+  r.stages.forEach((tries, s) => tries.forEach((t, a) => {
+    const g = t.att.g.toFixed(2);
+    if (t.v === "pass") items.push(`<li><span class="chip ok">pass</span> ${NAMES[s]}, try ${a + 1} · grounded ${g}
+      ${t.att.flaw ? `<div class="why" style="color:var(--danger)">passed, but ${t.att.why}</div>` : ""}</li>`);
+    else if (t.v === "retry") items.push(`<li><span class="chip retry">retry</span> ${NAMES[s]}, try ${a + 1} · ${LABEL[t.why]}
+      ${t.why === "grounded" ? `(${g})` : ""}<div class="why">${t.att.why || "a clean output, sent back by a strict bar"}</div></li>`);
+    else items.push(`<li><span class="chip human">a person</span> ${NAMES[s]} · ${LABEL[t.why]}</li>`);
+  }));
+  if (r.end === "person" && r.reason !== "claims investigator")
+    items.push(`<li><span class="chip human">a person</span> ${NAMES[r.at]} · ${r.reason}</li>`);
+  if (r.end === "sent") items.push(`<li><span class="chip ${r.leaks ? "bad" : "ok"}">sent</span> letter goes to the customer${r.leaks ? " — with a flaw in it" : ""}</li>`);
+  return items.join("");
+}
+
+const chip = (tries, s, r) => {
+  if (!tries) return `<span class="chip idle">—</span>`;
+  const lastTry = tries[tries.length - 1], n = tries.length - 1;
+  if (lastTry.v === "pass") return `<span class="chip ${lastTry.att.flaw ? "bad" : n ? "retry" : "ok"}">${n ? "↻".repeat(n) + " " : ""}${lastTry.att.flaw ? "flaw" : "✓"}</span>`;
+  return `<span class="chip human">${n ? "↻".repeat(n) + " " : ""}✋</span>`;
+};
+
+function refresh() {
+  $("#bar-v").textContent = bar().toFixed(2);
+  $("#retries-v").textContent = retries();
+  renderCode(code, SRC.replace("{BAR}", bar().toFixed(2)).replace("{RETRIES}", retries()));
+  const done = CLAIMS.slice(0, i).map((c) => run(c, bar(), retries()));
+  const sum = (k) => done.reduce((t, r) => t + r[k], 0);
+  const sent = done.filter((r) => r.end === "sent").length;
+  const person = done.length - sent, leaks = sum("leaks"), gates = sum("gates");
+  setStat("sent", sent); setStat("retries", sum("retries"));
+  setStat("person", person); setStat("leaks", leaks);
+  setStat("jev", (gates * .25).toFixed(1) + "s"); setStat("llm", gates * 4 + "s");
+  sentN.text(sent); personN.text(person);
+  leakN.text(leaks ? `${leaks} with a flaw` : "");
+  [0, 1, 2].forEach((s) => retryN[s].text("↻ " + done.reduce((t, r) => t + (r.stages[s] ? r.stages[s].filter((x) => x.v === "retry").length : 0), 0)));
+  $("#table tbody").innerHTML = done.map((r, k) => `<tr><td>${CLAIMS[k].t}</td>${[0, 1, 2].map((s) => `<td>${chip(r.stages[s], s, r)}</td>`).join("")}
+    <td>${r.end === "sent" ? (r.leaks ? `<span class="chip bad">sent, flawed</span>` : `<span class="chip ok">sent</span>`) : `<span class="chip human">a person</span>`}</td></tr>`).join("");
+  if (last !== null) {
+    const r = run(CLAIMS[last], bar(), retries());
+    $("#log").innerHTML = describe(r);
+    markCode(code, ...r.tags);
+  }
+  if (i >= CLAIMS.length) {
+    const needless = done.reduce((t, r) => t + r.needless, 0);
+    $("#verdict").innerHTML = leaks
+      ? `At a bar of <b>${bar().toFixed(2)}</b>, <b>${leaks}</b> flawed output${leaks > 1 ? "s" : ""} reached a customer. Raise the bar and watch them get caught at the handoff that introduced them.`
+      : needless
+        ? `No flaw got through, but <b>${needless}</b> retr${needless > 1 ? "ies were" : "y was"} for work that was fine. That is the cost of a strict bar: more time spent and more claims going to a person.`
+        : `<b>No flaws missed and no needless retries.</b> Every invented detail was caught at the handoff where it appeared, by a check that took about a quarter of a second.`;
+  }
+}
+
+function tick() {
+  if (i >= CLAIMS.length) { ticker.pause(); paint(); return; }
+  const c = CLAIMS[i]; last = i; i++;
+  inboxN.text(CLAIMS.length - i);
+  $("#claim-title").textContent = "· " + c.t;
+  $("#email").textContent = "“" + c.email + "”";
+  animate(run(c, bar(), retries()));
+  refresh();
+}
+
+const ticker = new Ticker(tick, 3600);
+const paint = wireControls({
+  ticker, playBtn: $("#play"), stepBtn: $("#step"), resetBtn: $("#reset"), speedInput: $("#speed"),
+  onReset() {
+    i = 0; last = null; inboxN.text(CLAIMS.length);
+    $("#email").innerHTML = "Press <b>Play</b>."; $("#log").innerHTML = ""; $("#claim-title").textContent = "";
+    $("#verdict").innerHTML = "Move the <b>grounding bar</b>. Too low and an invented fact gets through. Too high and good work keeps getting sent back until it ends up with a person.";
+    refresh();
+  },
+});
+$("#bar").addEventListener("input", refresh);
+$("#retries").addEventListener("input", refresh);
+refresh();
+</script>
+</body>
+</html>

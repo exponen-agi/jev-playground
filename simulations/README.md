@@ -1,6 +1,6 @@
 # Simulations
 
-Animated, interactive versions of the ten [cookbooks](../cookbooks) — built so a non-technical
+Animated, interactive versions of the sixteen [cookbooks](../cookbooks) — built so a non-technical
 colleague can see what the pattern does without reading Python. Every page carries a link to the
 Python it is built from, in its header.
 
@@ -79,17 +79,32 @@ The landing page groups them by what the business is actually doing, not by cook
 | 03 | [The checkpoint](./03-agent-guardrails.html) | Move each hazard threshold independently and watch verdicts flip |
 | 06 | [Picking the right brain](./06-model-router.html) | Watch requests fan out across no-model, small, reasoning and human paths |
 
+**Agentic systems** — one architecture each, with an [overview page](./agentic.html)
+
+| | Page | Try |
+|---|---|---|
+| 11 | [Three desks, one claim](./11-sequential-pipeline.html) | Sequential. Drag the grounding bar: too low and invented facts reach the customer, too high and good work goes to a person |
+| 12 | [Four specialists, one verdict](./12-parallel-fanout.html) | Parallel. Toggle "Jev picks" vs "Run all four"; raise the selection bar until a real issue is missed |
+| 13 | [The foreman](./13-orchestrator-workers.html) | Orchestrator–workers. Raise the confidence floor; shrink the step budget below the loop |
+| 14 | [Passing the customer on](./14-agent-handoff.html) | Handoff. Drag the margin to zero and watch the customer bounce between agents |
+| 15 | [Write, judge, rewrite](./15-evaluator-optimizer.html) | Evaluator–optimizer. Raise the quality bar and watch each round buy less |
+| 16 | [The agent on call](./16-tool-agent-loop.html) | Tool-calling agent. Raise the loop bar and the agent re-reads the same logs |
+
+The agentic pages also show **the code**: the Python decision loop sits beside the animation, and
+the lines the current step ran light up. The thresholds in it change as you drag the sliders.
+
 Every page has **Play**, **Step**, **Reset** and a speed control, plus at least one threshold
-you can drag — because the point of all ten is that the thresholds live in your code, where
+you can drag — because the point of all sixteen is that the thresholds live in your code, where
 they have a diff and a revert.
 
 ## Files
 
 ```
-index.html            landing page, cards grouped by domain
-0*-*.html, 10-*.html  one self-contained page per cookbook
+index.html            landing page, cards grouped by domain, plus the Agentic section
+0*-*.html, 1*-*.html  one self-contained page per cookbook
+agentic.html          overview of the six multi-agent architectures (11–16)
 assets/sim.css        shared design tokens, light and dark
-assets/sim.js         play/pause loop, stat helpers, deterministic RNG
+assets/sim.js         play/pause loop, stat helpers, deterministic RNG, code panel
 assets/d3-mini.js     d3-selection + d3-transition + d3-ease (37 KB, vendored)
 ```
 

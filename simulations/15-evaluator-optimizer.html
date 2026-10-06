@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Evaluator–Optimizer Loop</title>
+<meta name="description" content="A writer AI drafts product listings and Jev scores each draft against a five-part rubric. Code decides when it is done, what feedback goes back, and when the loop should stop and ask a person.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%278%27 fill=%27%23d63c9e%27/%3E%3Cpath d=%27M20 8v11a5 5 0 0 1-9 3%27 stroke=%27white%27 stroke-width=%273%27 fill=%27none%27 stroke-linecap=%27round%27/%3E%3C/svg%3E">
+<link rel="stylesheet" href="assets/sim.css">
+<style>
+  .rubric { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 12px; }
+  .rubric th, .rubric td { padding: 5px 6px; border-bottom: 1px solid var(--line-soft); text-align: center; }
+  .rubric th:first-child, .rubric td:first-child { text-align: left; color: var(--muted); }
+  .rubric th { font-size: 10.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 700; }
+  .rubric td.pass { color: var(--code); font-family: var(--mono); }
+  .rubric td.fail { color: var(--danger); font-family: var(--mono); font-weight: 650; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="agentic.html">← agentic systems</a>
+  <div class="top"><span class="eyebrow">Agentic · Evaluator–optimizer · Cookbook 15</span>
+    <span class="top-links">
+      <a class="repo-link" href="https://github.com/exponen-agi/jev-playground/blob/main/cookbooks/15_evaluator_optimizer.py"
+         aria-label="View the Python source for cookbook 15 on GitHub">
+        <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M4.72 3.22a.75.75 0 0 1 1.06 1.06L2.06 8l3.72 3.72a.75.75 0 1 1-1.06 1.06L.47 8.53a.75.75 0 0 1 0-1.06l4.25-4.25Zm6.56 0a.75.75 0 1 0-1.06 1.06L13.94 8l-3.72 3.72a.75.75 0 1 0 1.06 1.06l4.25-4.25a.75.75 0 0 0 0-1.06l-4.25-4.25Z"></path></svg><span class="label">The Python</span> <span class="mono">15_evaluator_optimizer.py</span>
+      </a>
+    </span>
+  </div>
+  <h1>Write, judge, rewrite</h1>
+  <p class="lede">An AI writer drafts a product listing. Jev scores the draft on five separate
+  things. Is every claim backed by the spec sheet? Is there a claim the brand forbids? Does it
+  sound like us? Is it clear? Does it end with a next step? The draft is done when every check
+  passes its bar, and that is a line of code, not a feeling. The writer is told exactly which
+  checks failed, and the loop stops on its own when another round will not help.</p>
+
+  <div class="panel">
+    <div class="controls">
+      <button id="play" class="primary">▶  Play</button>
+      <button id="step">Step</button>
+      <button id="reset">Reset</button>
+      <div class="spacer"></div>
+      <label class="ctl">Quality bar <input id="bar" type="range" min="1" max="1.8" step="0.05" value="1.4"><span class="val" id="bar-v">1.40</span></label>
+      <label class="ctl">Max rounds <input id="max" type="range" min="2" max="6" step="1" value="4"><span class="val" id="max-v">4</span></label>
+      <label class="ctl">Speed <input id="speed" type="range" min="0.5" max="4" step="0.5" value="1"></label>
+    </div>
+    <div class="stage-scroll"><svg id="stage" viewBox="0 0 960 300" role="img"
+         aria-label="A writer agent sends drafts to a Jev rubric. Failing drafts go back with feedback; passing drafts are published; repeated failures go to a person. A chart shows voice and clarity scores per round against the quality bar."></svg></div>
+    <div class="legend">
+      <span><i style="background:var(--llm)"></i>Writer LLM</span>
+      <span><i style="background:var(--jev)"></i>Jev rubric: five questions, one call</span>
+      <span><i style="background:var(--code)"></i>Published</span>
+      <span><i style="background:var(--human)"></i>A person</span>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="panel">
+      <h2>This draft <span class="sub" id="d-title"></span></h2>
+      <div id="draft" style="font-size:13.5px;background:var(--bg);border:1px solid var(--line);
+           border-radius:9px;padding:12px;min-height:48px">Press <b>Play</b>.</div>
+      <div class="table-scroll"><table class="rubric" id="rubric"></table></div>
+      <p class="note" id="feedback"></p>
+    </div>
+    <div class="panel">
+      <h2>So far</h2>
+      <div class="stats">
+        <div class="stat" data-stat="pub"><div class="k">Published</div><div class="v">0</div><div class="n">every check passed</div></div>
+        <div class="stat" data-stat="person"><div class="k">To a person</div><div class="v">0</div><div class="n">with the reason</div></div>
+        <div class="stat" data-stat="writes"><div class="k">Writer calls</div><div class="v">0</div><div class="n">LLM drafts</div></div>
+        <div class="stat" data-stat="jev"><div class="k">Judging time</div><div class="v">0.0s</div><div class="n">Jev, all rounds</div></div>
+        <div class="stat" data-stat="llm"><div class="k">LLM critic</div><div class="v">0s</div><div class="n">same rounds</div></div>
+      </div>
+      <p class="note" id="verdict">Raise the <b>quality bar</b> and watch the mug listing need more rounds
+      for smaller gains, until it never gets there. Lower <b>max rounds</b> to 2 and the backpack runs
+      out of rounds one short. Finished products are re-checked at the new settings.</p>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="panel">
+      <h2>The code <span class="sub">· this round's lines, and the checks that failed</span></h2>
+      <pre class="code" id="code"></pre>
+    </div>
+    <div class="panel">
+      <h2>Every product so far <span class="sub">· at the current settings</span></h2>
+      <div class="table-scroll"><table class="rows" id="table">
+        <thead><tr><th>Product</th><th>Rounds</th><th>Outcome</th></tr></thead>
+        <tbody></tbody>
+      </table></div>
+    </div>
+  </div>
+
+  <p class="note">The numbers are illustrative, not measured. About 0.25s per Jev rubric call and about 6s
+  per LLM-critic call. The single-pass version of this check is
+  <a href="04-output-verifier.html">04 · The second pair of eyes</a>. ←
+  <a href="14-agent-handoff.html">14 · Passing the customer on</a> · Next:
+  <a href="16-tool-agent-loop.html">16 · The agent on call</a> →</p>
+</div>
+
+<script type="text/plain" id="py">
+QUALITY_BAR = {BAR}       # slider
+MAX_ROUNDS = {MAX}        # slider
+CHECKS = {
+    "accurate":  lambda a: a["accurate"].noul > 0.85,      #@accurate
+    "banned":    lambda a: a["banned_claim"].noul < 0.20,  #@banned
+    "voice":     lambda a: a["on_voice"].score > QUALITY_BAR,  #@voice
+    "clear":     lambda a: a["clear"].score > QUALITY_BAR,     #@clear
+    "next_step": lambda a: a["has_next_step"].noul > 0.70,  #@next_step
+}
+
+for round in range(1, MAX_ROUNDS + 1):
+    draft = writer.run(spec + feedback)   # LLM writes  #@write
+    a = jev.system_one(state={"draft": draft, ...},     #@jev
+                       questions=RUBRIC).answers        #@jev
+    failed = [n for n, ok in CHECKS.items() if not ok(a)]
+    if not failed:                                      #@publish
+        return publish(draft)                           #@publish
+    streak = streak + 1 if "banned" in failed else 0
+    if streak >= 2:                                     #@streak
+        return to_person("banned claim keeps coming back")  #@streak
+    feedback = "\n".join(FIX[n] for n in failed)        #@feedback
+return to_person("still failing after MAX_ROUNDS")      #@budget
+</script>
+
+<script src="assets/d3-mini.js"></script>
+<script type="module">
+import { $, Ticker, wireControls, setStat, dur, renderCode, markCode, travel } from "./assets/sim.js";
+
+const CHECKS = [
+  ["accurate", "every claim backed", (r) => r.acc > .85, (r) => r.acc],
+  ["banned", "no banned claim", (r) => r.ban < .2, (r) => r.ban],
+  ["voice", "sounds like us", (r, bar) => r.voice > bar, (r) => r.voice],
+  ["clear", "clear at a glance", (r, bar) => r.clear > bar, (r) => r.clear],
+  ["next_step", "ends with a next step", (r) => r.cta > .7, (r) => r.cta],
+];
+const FIX = {
+  accurate: "Remove any claim the spec sheet does not support.", banned: "Remove the banned claim; do not rephrase it.",
+  voice: "Plain, warm, no hype.", clear: "Say what it is and who it is for first.", next_step: "End with one clear next step.",
+};
+const R = (acc, ban, voice, clear, cta, d) => ({ acc, ban, voice, clear, cta, d });
+const P = [
+  { t: "Linen throw", rounds: [
+    R(.6, .82, .3, 1.0, .2, "The BEST throw you'll ever own!!! Luxurious linen that transforms any room."),
+    R(.95, .05, 1.7, 1.75, .9, "A 100% European linen throw, 130 × 170 cm, in oat or sage. Machine washable at 40°C. Pick your colour below."),
+    R(.95, .05, 1.72, 1.76, .9, "(same)"), R(.95, .05, 1.72, 1.76, .9, "(same)"), R(.95, .05, 1.72, 1.76, .9, "(same)"), R(.95, .05, 1.72, 1.76, .9, "(same)"),
+  ] },
+  { t: "Stoneware mug", rounds: [
+    R(.9, .05, 1.2, 1.3, .8, "Our stoneware mug is a lovely way to start the day, made with care for coffee lovers everywhere."),
+    R(.92, .04, 1.45, 1.5, .85, "A 350 ml stoneware mug for your morning coffee. Dishwasher safe. Add it to your basket."),
+    R(.93, .04, 1.58, 1.56, .86, "A 350 ml stoneware mug, glazed by hand, for the first coffee of the day. Dishwasher safe. Add it to your basket."),
+    R(.93, .04, 1.65, 1.63, .87, "Hand-glazed stoneware, 350 ml, made for the first coffee of the day. Dishwasher safe. Add it to your basket."),
+    R(.93, .04, 1.69, 1.67, .87, "Hand-glazed stoneware mug, 350 ml. For the first coffee of the day. Dishwasher safe. Add it to your basket."),
+    R(.93, .04, 1.71, 1.69, .87, "Hand-glazed 350 ml stoneware mug for the first coffee of the day. Dishwasher safe. Add to basket."),
+  ] },
+  { t: "Lavender pillow mist", rounds: [
+    R(.4, .91, 1.1, 1.5, .6, "A calming lavender mist clinically shown to improve sleep. Spray and drift off."),
+    R(.55, .74, 1.4, 1.6, .8, "Lavender and chamomile in a 100 ml spray. Proven to help you sleep better."),
+    R(.6, .6, 1.5, 1.6, .8, "Lavender and chamomile, 100 ml. Helps you sleep."),
+    R(.6, .58, 1.5, 1.6, .8, "(same)"), R(.6, .58, 1.5, 1.6, .8, "(same)"), R(.6, .58, 1.5, 1.6, .8, "(same)"),
+  ] },
+  { t: "Kids' backpack", rounds: [
+    R(.7, .1, 1.5, 1.6, .9, "A fully waterproof backpack for school, with reflective strips. Order today."),
+    R(.9, .08, 1.5, 1.55, .3, "A water-resistant 12 L school backpack with reflective strips and a padded back."),
+    R(.93, .07, 1.55, 1.6, .88, "A water-resistant 12 L school backpack with reflective strips and a padded back. Choose a colour below."),
+    R(.93, .07, 1.56, 1.6, .88, "(same)"), R(.93, .07, 1.56, 1.6, .88, "(same)"), R(.93, .07, 1.56, 1.6, .88, "(same)"),
+  ] },
+];
+
+function run(p, bar, max) {
+  const log = [];
+  let streak = 0;
+  for (let k = 0; k < max; k++) {
+    const r = p.rounds[k], failed = CHECKS.filter(([, , ok]) => !ok(r, bar)).map(([n]) => n);
+    log.push({ r, failed });
+    if (!failed.length) return { end: "publish", at: k + 1, log, why: `all five checks pass in round ${k + 1}` };
+    streak = failed.includes("banned") ? streak + 1 : 0;
+    if (streak >= 2) return { end: "person", at: k + 1, log, why: "banned claim twice in a row", tag: "streak" };
+  }
+  return { end: "person", at: max, log, why: `still failing after ${max} rounds`, tag: "budget" };
+}
+
+// ------------------------------------------------------------------ drawing
+const svg = d3.select("#stage");
+svg.append("defs").append("marker").attr("id", "a15").attr("viewBox", "0 0 8 8").attr("refX", 7)
+  .attr("refY", 4).attr("markerWidth", 6).attr("markerHeight", 6).attr("orient", "auto")
+  .append("path").attr("d", "M0,0 L8,4 L0,8 Z").attr("fill", "var(--muted)");
+const text = (x, y, s, o = {}) => svg.append("text").attr("x", x).attr("y", y).attr("text-anchor", o.a || "middle")
+  .attr("font-size", o.size || 12).attr("font-weight", o.w || 400).attr("fill", o.fill || "var(--ink)")
+  .attr("font-family", o.mono ? "var(--mono)" : null).text(s);
+const link = (id, d, dash) => svg.append("path").attr("id", id).attr("d", d).attr("fill", "none").attr("stroke", "var(--line)")
+  .attr("stroke-width", 1.8).attr("stroke-dasharray", dash || null).attr("marker-end", "url(#a15)");
+
+const WY = 150, JX = 300;
+svg.append("rect").attr("x", 30).attr("y", WY - 32).attr("width", 150).attr("height", 64).attr("rx", 10)
+  .attr("fill", "var(--panel)").attr("stroke", "var(--llm)").attr("stroke-width", 1.5);
+text(105, WY - 6, "Writer agent", { w: 620, size: 13 });
+text(105, WY + 13, "LLM · drafts the listing", { size: 10.5, fill: "var(--muted)" });
+link("p-draft", `M180,${WY} L${JX - 38},${WY}`);
+link("p-back", `M${JX},${WY + 34} C${JX},${WY + 100} 105,${WY + 100} 105,${WY + 36}`, "4 4");
+text((JX + 105) / 2, WY + 96, "feedback: the checks that failed", { size: 10.5, fill: "var(--muted)" });
+svg.append("rect").attr("x", JX - 30).attr("y", WY - 30).attr("width", 60).attr("height", 60).attr("rx", 8)
+  .attr("transform", `rotate(45 ${JX} ${WY})`).attr("fill", "var(--jev)");
+text(JX, WY - 3, "Jev", { size: 14, w: 700, fill: "#fff" });
+text(JX, WY + 13, "5-part rubric", { size: 9.5, fill: "#fff" });
+const pulse = svg.append("rect").attr("x", JX - 30).attr("y", WY - 30).attr("width", 60).attr("height", 60).attr("rx", 8)
+  .attr("transform", `rotate(45 ${JX} ${WY})`).attr("fill", "none").attr("stroke", "var(--jev)").attr("stroke-width", 3).attr("opacity", 0);
+const roundT = text(JX, WY - 58, "round 0", { size: 12, mono: true, fill: "var(--muted)" });
+
+[["publish", "Published", "--code", WY - 70], ["person", "A person", "--human", WY + 70]].forEach(([id, label, c, y]) => {
+  link(`p-${id}`, `M${JX + 40},${WY} C${JX + 90},${WY} ${410},${y} ${436},${y}`);
+  svg.append("rect").attr("x", 440).attr("y", y - 24).attr("width", 92).attr("height", 48).attr("rx", 9)
+    .attr("fill", "var(--panel)").attr("stroke", `var(${c})`).attr("stroke-width", 1.5);
+  text(486, y - 4, label, { size: 12, w: 620 });
+});
+const pubN = text(486, WY - 70 + 14, "0", { size: 14, w: 650, mono: true, fill: "var(--code)" });
+const perN = text(486, WY + 70 + 14, "0", { size: 14, w: 650, mono: true, fill: "var(--human)" });
+
+// chart: voice and clarity per round, against the bar
+const CX0 = 610, CX1 = 930, CY0 = 250, CY1 = 40;
+const cx = (k) => CX0 + (k / 5) * (CX1 - CX0), cy = (v) => CY0 - (v / 2) * (CY0 - CY1);
+text((CX0 + CX1) / 2, 12, "voice and clarity per round (Score, 0–2)", { size: 11, fill: "var(--muted)" });
+[0, 1, 2].forEach((v) => {
+  svg.append("line").attr("x1", CX0).attr("x2", CX1).attr("y1", cy(v)).attr("y2", cy(v)).attr("stroke", "var(--line-soft)");
+  text(CX0 - 8, cy(v) + 4, v, { a: "end", size: 10, mono: true, fill: "var(--muted)" });
+});
+for (let k = 0; k < 6; k++) text(cx(k), CY0 + 18, k + 1, { size: 10, mono: true, fill: "var(--muted)" });
+const barLine = svg.append("line").attr("x1", CX0).attr("x2", CX1).attr("stroke", "var(--jev)").attr("stroke-width", 1.5).attr("stroke-dasharray", "5 4");
+const barT = text(CX1, 0, "bar", { a: "end", size: 10, fill: "var(--jev)", mono: true });
+const maxLine = svg.append("line").attr("y1", CY1).attr("y2", CY0).attr("stroke", "var(--human)").attr("stroke-width", 1.2).attr("stroke-dasharray", "3 3");
+const chart = svg.append("g");
+
+// ------------------------------------------------------------------ state
+const SRC = $("#py").textContent, code = $("#code");
+const bar = () => Number($("#bar").value), max = () => Number($("#max").value);
+let pi = 0, k = 0, done = [], lastTags = [];
+
+function drawChart(p, upto) {
+  chart.selectAll("*").remove();
+  if (!p) return;
+  [["voice", "--llm"], ["clear", "--code"]].forEach(([key, c]) => {
+    const pts = p.rounds.slice(0, upto).map((r, j) => [cx(j), cy(r[key])]);
+    if (pts.length > 1) chart.append("path").attr("d", "M" + pts.map((q) => q.join(",")).join("L"))
+      .attr("fill", "none").attr("stroke", `var(${c})`).attr("stroke-width", 2);
+    pts.forEach(([x, y]) => chart.append("circle").attr("cx", x).attr("cy", y).attr("r", 4).attr("fill", `var(${c})`));
+  });
+  chart.append("text").attr("x", CX0 + 4).attr("y", CY1 - 6).attr("font-size", 10.5).attr("fill", "var(--llm)").text("● voice");
+  chart.append("text").attr("x", CX0 + 64).attr("y", CY1 - 6).attr("font-size", 10.5).attr("fill", "var(--code)").text("● clear");
+}
+
+function rubric(res, upto) {
+  const cols = res.log.slice(0, upto);
+  $("#rubric").innerHTML = `<thead><tr><th>Check</th>${cols.map((_, j) => `<th>R${j + 1}</th>`).join("")}</tr></thead><tbody>` +
+    CHECKS.map(([n, label, ok, val]) => `<tr><td>${label}</td>${cols.map(({ r }) =>
+      `<td class="${ok(r, bar()) ? "pass" : "fail"}">${val(r).toFixed(2)}</td>`).join("")}</tr>`).join("") + "</tbody>";
+}
+
+function refresh() {
+  $("#bar-v").textContent = bar().toFixed(2); $("#max-v").textContent = max();
+  renderCode(code, SRC.replace("{BAR}", bar().toFixed(2)).replace("{MAX}", max()));
+  markCode(code, ...lastTags);
+  barLine.attr("y1", cy(bar())).attr("y2", cy(bar())); barT.attr("y", cy(bar()) - 5);
+  maxLine.attr("x1", cx(max() - 1) + 10).attr("x2", cx(max() - 1) + 10);
+  const results = done.map((j) => run(P[j], bar(), max()));
+  const writes = results.reduce((t, r) => t + r.log.length, 0) + k;
+  setStat("pub", results.filter((r) => r.end === "publish").length);
+  setStat("person", results.filter((r) => r.end === "person").length);
+  setStat("writes", writes);
+  setStat("jev", (writes * .25).toFixed(1) + "s"); setStat("llm", writes * 6 + "s");
+  pubN.text(results.filter((r) => r.end === "publish").length); perN.text(results.filter((r) => r.end === "person").length);
+  $("#table tbody").innerHTML = results.map((r, j) => `<tr><td>${P[done[j]].t}</td><td class="tick">${r.log.length}</td>
+    <td><span class="chip ${r.end === "publish" ? "ok" : "human"}">${r.end === "publish" ? "published" : "a person"}</span>
+    <div style="font-size:11px;color:var(--muted)">${r.why}</div></td></tr>`).join("");
+  if (done.length === P.length) {
+    const mug = results[1];
+    $("#verdict").innerHTML = `At a bar of <b>${bar().toFixed(2)}</b>: ${results.filter((r) => r.end === "publish").length} published, ${results.filter((r) => r.end === "person").length} to a person, <b>${writes}</b> drafts written.
+      The mug ${mug.end === "publish" ? `took <b>${mug.at}</b> round${mug.at > 1 ? "s" : ""}` : "<b>never got there</b>"}. Past about 1.6 every extra round buys a few hundredths, which is the point where a person should decide whether it is good enough.`;
+  }
+}
+
+function tick() {
+  if (pi >= P.length) { ticker.pause(); paint(); return; }
+  const p = P[pi], res = run(p, bar(), max());
+  k = Math.min(k, res.log.length - 1);          // a slider may have shortened this run
+  const entry = res.log[k];
+  $("#d-title").textContent = `· ${p.t} · round ${k + 1}`;
+  $("#draft").textContent = entry.r.d === "(same)" ? "(the writer resubmits almost the same draft)" : "“" + entry.r.d + "”";
+  roundT.text(`round ${k + 1}`);
+  travel(svg, document.getElementById("p-draft"), "var(--llm)", { ms: 420 });
+  pulse.transition().delay(dur(420)).duration(0).attr("opacity", .9).transition().duration(dur(380)).attr("opacity", 0);
+  rubric(res, k + 1);
+  drawChart(p, k + 1);
+  const last = k === res.log.length - 1;
+  const tags = ["write", "jev", ...entry.failed];
+  if (!last) {
+    travel(svg, document.getElementById("p-back"), "var(--llm)", { ms: 520, delay: 820, r: 5 });
+    $("#feedback").innerHTML = `<b>Feedback, built in code:</b> ${entry.failed.map((n) => FIX[n]).join(" ")}`;
+    tags.push("feedback"); k++;
+  } else {
+    travel(svg, document.getElementById(`p-${res.end}`), `var(${res.end === "publish" ? "--code" : "--human"})`, { ms: 520, delay: 820 });
+    $("#feedback").innerHTML = `<b>${res.end === "publish" ? "Published" : "To a person"}:</b> ${res.why}.`;
+    tags.push(res.end === "publish" ? "publish" : res.tag);
+    done.push(pi); pi++; k = 0;
+  }
+  lastTags = tags;
+  refresh();
+}
+
+const ticker = new Ticker(tick, 1900);
+const paint = wireControls({
+  ticker, playBtn: $("#play"), stepBtn: $("#step"), resetBtn: $("#reset"), speedInput: $("#speed"),
+  onReset() {
+    pi = k = 0; done = []; lastTags = []; drawChart(null); roundT.text("round 0");
+    $("#draft").innerHTML = "Press <b>Play</b>."; $("#rubric").innerHTML = ""; $("#feedback").innerHTML = ""; $("#d-title").textContent = "";
+    refresh();
+  },
+});
+$("#bar").addEventListener("input", refresh);
+$("#max").addEventListener("input", () => { if (k >= max()) k = 0; refresh(); });
+refresh();
+</script>
+</body>
+</html>

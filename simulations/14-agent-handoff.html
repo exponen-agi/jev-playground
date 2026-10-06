@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Agent Handoff Router</title>
+<meta name="description" content="A travel assistant made of specialist AI agents. On every customer turn Jev decides whether the conversation stays, moves to another agent, or goes to a person, using a margin that stops agents passing the customer back and forth.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%278%27 fill=%27%23d63c9e%27/%3E%3Cpath d=%27M20 8v11a5 5 0 0 1-9 3%27 stroke=%27white%27 stroke-width=%273%27 fill=%27none%27 stroke-linecap=%27round%27/%3E%3C/svg%3E">
+<link rel="stylesheet" href="assets/sim.css">
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="agentic.html">← agentic systems</a>
+  <div class="top"><span class="eyebrow">Agentic · Router / handoff · Cookbook 14</span>
+    <span class="top-links">
+      <a class="repo-link" href="https://github.com/exponen-agi/jev-playground/blob/main/cookbooks/14_agent_handoff.py"
+         aria-label="View the Python source for cookbook 14 on GitHub">
+        <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M4.72 3.22a.75.75 0 0 1 1.06 1.06L2.06 8l3.72 3.72a.75.75 0 1 1-1.06 1.06L.47 8.53a.75.75 0 0 1 0-1.06l4.25-4.25Zm6.56 0a.75.75 0 1 0-1.06 1.06L13.94 8l-3.72 3.72a.75.75 0 1 0 1.06 1.06l4.25-4.25a.75.75 0 0 0 0-1.06l-4.25-4.25Z"></path></svg><span class="label">The Python</span> <span class="mono">14_agent_handoff.py</span>
+      </a>
+    </span>
+  </div>
+  <h1>Passing the customer on</h1>
+  <p class="lede">A travel assistant made of specialist AI agents: a concierge, plus agents that can
+  change flights, change hotels, and issue refunds. After every message from the customer,
+  something decides whether the conversation stays where it is or moves. Hand off too
+  easily and the customer is passed back and forth. Hand off too reluctantly and the hotel agent
+  ends up handling a refund it has no way to issue. Jev reads each message, and one number in
+  your code sets how clear the win must be before a handoff.</p>
+
+  <div class="panel">
+    <div class="controls">
+      <button id="play" class="primary">▶  Play</button>
+      <button id="step">Step</button>
+      <button id="reset">Reset</button>
+      <div class="spacer"></div>
+      <label class="ctl">Handoff margin <input id="margin" type="range" min="0" max="0.6" step="0.05" value="0.15"><span class="val" id="margin-v">0.15</span></label>
+      <label class="ctl">Speed <input id="speed" type="range" min="0.5" max="4" step="0.5" value="1"></label>
+    </div>
+    <div class="stage-scroll"><svg id="stage" viewBox="0 0 960 360" role="img"
+         aria-label="Eleven customer turns run left to right across five lanes: concierge, flights, hotels, refunds and a person. A line shows which agent owns the conversation at each turn."></svg></div>
+    <div class="legend">
+      <span><i style="background:var(--llm)"></i>The agent that owns this turn</span>
+      <span><i style="background:var(--danger)"></i>Wrong agent: ○ marks who should have it</span>
+      <span><i style="background:var(--human)"></i>A person</span>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="panel">
+      <h2>Jev's read of this turn <span class="sub" id="turn-title"></span></h2>
+      <div id="msg" style="font-size:14px;background:var(--bg);border:1px solid var(--line);
+           border-radius:9px;padding:12px;min-height:48px">Press <b>Play</b>.</div>
+      <div id="read" style="margin-top:12px"></div>
+    </div>
+    <div class="panel">
+      <h2>This conversation</h2>
+      <div class="stats">
+        <div class="stat" data-stat="handoffs"><div class="k">Handoffs</div><div class="v">0</div><div class="n">agent changes</div></div>
+        <div class="stat" data-stat="bounces"><div class="k">Bounces</div><div class="v">0</div><div class="n">away and straight back</div></div>
+        <div class="stat" data-stat="wrong"><div class="k">Wrong agent</div><div class="v">0</div><div class="n">turns</div></div>
+        <div class="stat" data-stat="calls"><div class="k">Routing time</div><div class="v">0.0s</div><div class="n">Jev, all turns</div></div>
+      </div>
+      <p class="note" id="verdict">Drag the <b>handoff margin</b> to zero: turn 4 ("what time is check-in?")
+      goes to hotels and turn 5 sends it back. Drag it past 0.20: the duplicate-deposit refund on turn 8
+      stays with the hotel agent. The whole path is recomputed live.</p>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="panel">
+      <h2>The code <span class="sub">· lines this turn ran are highlighted</span></h2>
+      <pre class="code" id="code"></pre>
+    </div>
+    <div class="panel">
+      <h2>Turn by turn <span class="sub">· at the current margin</span></h2>
+      <ul class="log" id="log"></ul>
+    </div>
+  </div>
+
+  <p class="note">The numbers are illustrative, not measured. About 0.25s per Jev call. Routing by model
+  is a different problem, covered in <a href="06-model-router.html">06 · Picking the right brain</a>. ←
+  <a href="13-orchestrator-workers.html">13 · The foreman</a> · Next:
+  <a href="15-evaluator-optimizer.html">15 · Write, judge, rewrite</a> →</p>
+</div>
+
+<script type="text/plain" id="py">
+HANDOFF_MARGIN = {M}       # slider
+
+a = jev.system_one(                                    #@jev
+    state={"owner": owner, "recent": recent, "msg": msg},  #@jev
+    questions=TURN).answers                            #@jev
+if a["wants_human"].noul > 0.7:                        #@person
+    return PERSON                                      #@person
+if a["frustration"].score > 1.6:                       #@person
+    return PERSON                                      #@person
+topic = a["topic"]
+if topic.choice == owner:                              #@same
+    return owner                                       #@same
+p = topic.probabilities
+lead = p[topic.choice] - p[owner]
+if a["mid_task"].noul > 0.7:                           #@mid
+    return owner         # they're answering the owner  #@mid
+if lead <= HANDOFF_MARGIN:                             #@hold
+    return owner         # not a clear enough win      #@hold
+return topic.choice      # hand off                    #@handoff
+</script>
+
+<script src="assets/d3-mini.js"></script>
+<script type="module">
+import { $, Ticker, wireControls, setStat, dur, renderCode, markCode } from "./assets/sim.js";
+
+const LANES = ["concierge", "flights", "hotels", "refunds", "person"];
+const T = [
+  { m: "Hi, I need to change my flight to Lisbon next Friday.", p: { flights: .9, concierge: .06, hotels: .02, refunds: .02 }, mid: .1, want: .02, fr: .1, truth: "flights" },
+  { m: "Can I go on the Thursday instead, same time?", p: { flights: .93, hotels: .03, concierge: .02, refunds: .02 }, mid: .85, want: .01, fr: .1, truth: "flights" },
+  { m: "Great. Does the Thursday flight include a checked bag?", p: { flights: .82, hotels: .08, concierge: .06, refunds: .04 }, mid: .2, want: .01, fr: .1, truth: "flights" },
+  { m: "Hmm, and what time is check-in?", p: { hotels: .52, flights: .44, concierge: .03, refunds: .01 }, mid: .55, want: .02, fr: .2, truth: "flights" },
+  { m: "I mean for the flight — online, or at the airport?", p: { flights: .9, hotels: .07, concierge: .02, refunds: .01 }, mid: .3, want: .03, fr: .5, truth: "flights" },
+  { m: "OK, done. Now my hotel: I'll need the Wednesday night too.", p: { hotels: .88, flights: .08, concierge: .02, refunds: .02 }, mid: .1, want: .01, fr: .2, truth: "hotels" },
+  { m: "Is it the same room type?", p: { hotels: .9, flights: .04, concierge: .04, refunds: .02 }, mid: .4, want: .01, fr: .1, truth: "hotels" },
+  { m: "The hotel charged my card twice for the deposit. Can I get one back?", p: { refunds: .58, hotels: .38, concierge: .02, flights: .02 }, mid: .2, want: .04, fr: .7, truth: "refunds" },
+  { m: "It's €120. I can see both charges on my statement.", p: { refunds: .82, hotels: .14, concierge: .02, flights: .02 }, mid: .35, want: .03, fr: .8, truth: "refunds" },
+  { m: "Thanks. What's the weather like in Lisbon in May?", p: { concierge: .74, refunds: .12, flights: .08, hotels: .06 }, mid: .05, want: .01, fr: .1, truth: "concierge" },
+  { m: "Actually, I'd rather just talk to someone.", p: { concierge: .6, refunds: .2, flights: .1, hotels: .1 }, mid: .05, want: .93, fr: 1.2, truth: "person" },
+];
+
+function route(margin) {
+  let owner = "concierge";
+  return T.map((t) => {
+    const top = Object.entries(t.p).sort((a, b) => b[1] - a[1])[0][0];
+    let to = owner, why, tag;
+    if (t.want > .7 || t.fr > 1.6) { to = "person"; why = "asked for a person"; tag = "person"; }
+    else if (top === owner) { why = "stays: same topic"; tag = "same"; }
+    else {
+      const lead = t.p[top] - (t.p[owner] || 0);
+      if (t.mid > .7) { why = `stays: answering ${owner}`; tag = "mid"; }
+      else if (lead <= margin) { why = `stays: ${top} leads by only ${lead.toFixed(2)}`; tag = "hold"; }
+      else { to = top; why = `hand off: ${top} leads by ${lead.toFixed(2)}`; tag = "handoff"; }
+    }
+    const r = { from: owner, to, why, tag, top };
+    owner = to;
+    return r;
+  });
+}
+
+// ------------------------------------------------------------------ drawing
+const svg = d3.select("#stage");
+const X0 = 150, DX = 74, LY = (k) => 40 + k * 66, X = (j) => X0 + j * DX;
+const COLOUR = { concierge: "--llm", flights: "--llm", hotels: "--llm", refunds: "--llm", person: "--human" };
+LANES.forEach((l, k) => {
+  svg.append("line").attr("x1", X0 - 20).attr("x2", X(T.length - 1) + 20).attr("y1", LY(k)).attr("y2", LY(k))
+    .attr("stroke", "var(--line-soft)").attr("stroke-width", 1.5);
+  svg.append("text").attr("x", 16).attr("y", LY(k) + 4).attr("font-size", 12.5).attr("font-weight", 620)
+    .attr("fill", `var(${COLOUR[l]})`).text(l === "person" ? "A person" : l[0].toUpperCase() + l.slice(1));
+});
+T.forEach((t, j) => svg.append("text").attr("x", X(j)).attr("y", 350).attr("text-anchor", "middle")
+  .attr("font-size", 11).attr("font-family", "var(--mono)").attr("fill", "var(--muted)").text(j + 1));
+const layer = svg.append("g");
+const cursor = svg.append("rect").attr("y", 14).attr("height", 316).attr("width", 44).attr("rx", 8)
+  .attr("fill", "var(--jev)").attr("opacity", 0).attr("x", X0 - 22);
+
+// ------------------------------------------------------------------ state
+const SRC = $("#py").textContent, code = $("#code");
+const margin = () => Number($("#margin").value);
+let n = 0;
+
+function draw(animateLast) {
+  const R = route(margin()).slice(0, n);
+  layer.selectAll("*").remove();
+  let prev = null;
+  R.forEach((r, j) => {
+    const y = LY(LANES.indexOf(r.to)), x = X(j);
+    if (prev) {
+      const seg = layer.append("path").attr("d", `M${prev[0]},${prev[1]} C${prev[0] + DX / 2},${prev[1]} ${x - DX / 2},${y} ${x},${y}`)
+        .attr("fill", "none").attr("stroke", "var(--llm)").attr("stroke-width", 2.5);
+      if (animateLast && j === R.length - 1) {
+        const len = seg.node().getTotalLength();
+        seg.attr("stroke-dasharray", len).attr("stroke-dashoffset", len).transition().duration(dur(450)).attr("stroke-dashoffset", 0);
+      }
+    }
+    prev = [x, y];
+  });
+  R.forEach((r, j) => {
+    const x = X(j), y = LY(LANES.indexOf(r.to)), wrong = r.to !== T[j].truth;
+    if (wrong) layer.append("circle").attr("cx", x).attr("cy", LY(LANES.indexOf(T[j].truth))).attr("r", 9)
+      .attr("fill", "none").attr("stroke", "var(--danger)").attr("stroke-width", 2).attr("stroke-dasharray", "3 2");
+    layer.append("circle").attr("cx", x).attr("cy", y).attr("r", 8)
+      .attr("fill", wrong ? "var(--danger)" : `var(${COLOUR[r.to]})`).attr("stroke", "var(--panel)").attr("stroke-width", 2);
+  });
+  return R;
+}
+
+function refresh(animateLast = false) {
+  $("#margin-v").textContent = margin().toFixed(2);
+  renderCode(code, SRC.replace("{M}", margin().toFixed(2)));
+  const R = draw(animateLast);
+  let handoffs = 0, bounces = 0, wrong = 0;
+  R.forEach((r, j) => {
+    if (r.to !== r.from) handoffs++;
+    // a bounce: a handoff to the wrong agent, undone on the very next turn
+    if (r.to !== r.from && r.to !== T[j].truth && R[j + 1] && R[j + 1].to === r.from) bounces++;
+    if (r.to !== T[j].truth) wrong++;
+  });
+  setStat("handoffs", handoffs); setStat("bounces", bounces); setStat("wrong", wrong);
+  setStat("calls", (R.length * .25).toFixed(1) + "s");
+  $("#log").innerHTML = R.map((r, j) => {
+    const cls = r.to === "person" ? "human" : r.to !== T[j].truth ? "bad" : r.to !== r.from ? "jev" : "ok";
+    return `<li><span class="chip ${cls}">${j + 1} · ${r.to}</span> ${T[j].m}<div class="why">${r.why}${r.to !== T[j].truth ? ` · should be ${T[j].truth}` : ""}</div></li>`;
+  }).join("");
+  $("#log").scrollTop = $("#log").scrollHeight;
+  if (n) {
+    const r = R[n - 1], t = T[n - 1];
+    markCode(code, "jev", r.tag);
+    $("#turn-title").textContent = `· turn ${n} · owner was ${r.from}`;
+    $("#msg").textContent = "“" + t.m + "”";
+    $("#read").innerHTML = `<div style="font-size:12px;color:var(--muted);margin-bottom:6px">topic <span class="mono">(Choice)</span></div>` +
+      ["concierge", "flights", "hotels", "refunds"].map((o) => `
+        <div style="display:grid;grid-template-columns:78px 1fr 40px;gap:8px;align-items:center;margin:4px 0;font-size:12px">
+          <span style="color:${o === r.from ? "var(--ink)" : "var(--muted)"};font-weight:${o === r.from ? 650 : 400}">${o}${o === r.from ? " ●" : ""}</span>
+          <div class="bar"><span style="width:${t.p[o] * 100}%;background:var(${o === r.top ? "--jev" : "--llm"})"></span></div>
+          <span class="tick" style="text-align:right">${t.p[o].toFixed(2)}</span></div>`).join("") +
+      `<div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;font-size:12px">
+        <span>mid_task <b class="tick">${t.mid.toFixed(2)}</b></span>
+        <span style="color:${t.want > .7 ? "var(--human)" : "inherit"}">wants_human <b class="tick">${t.want.toFixed(2)}</b></span>
+        <span>frustration <b class="tick">${t.fr.toFixed(2)}</b></span></div>
+       <p class="note" style="margin-top:10px">→ <b>${r.why}</b></p>`;
+    cursor.attr("x", X(n - 1) - 22).attr("opacity", .1);
+  }
+  if (n >= T.length) {
+    $("#verdict").innerHTML = bounces
+      ? `At a margin of <b>${margin().toFixed(2)}</b> the customer was passed away and straight back <b>${bounces}</b> time${bounces > 1 ? "s" : ""}. A model that names a topic with no probability attached cannot express "only switch if it's a clear win".`
+      : wrong > 0
+        ? `No bounces, but <b>${wrong}</b> turn${wrong > 1 ? "s were" : " was"} handled by the wrong agent. Too high a margin makes the current agent hold on to conversations it cannot handle.`
+        : `<b>${handoffs}</b> handoffs, no bounces, and every turn with the right agent. The whole rule is three lines of code comparing two calibrated probabilities.`;
+  }
+}
+
+function tick() {
+  if (n >= T.length) { ticker.pause(); paint(); return; }
+  n++; refresh(true);
+}
+
+const ticker = new Ticker(tick, 1600);
+const paint = wireControls({
+  ticker, playBtn: $("#play"), stepBtn: $("#step"), resetBtn: $("#reset"), speedInput: $("#speed"),
+  onReset() {
+    n = 0; cursor.attr("opacity", 0); $("#turn-title").textContent = ""; $("#read").innerHTML = "";
+    $("#msg").innerHTML = "Press <b>Play</b>.";
+    refresh();
+  },
+});
+$("#margin").addEventListener("input", () => refresh());
+refresh();
+</script>
+</body>
+</html>

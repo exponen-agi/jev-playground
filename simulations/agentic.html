@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Agentic Systems with Jev</title>
+<meta name="description" content="Six multi-agent architectures (sequential, parallel, orchestrator–workers, handoff, evaluator–optimizer and tool-calling loops) with Jev making the decisions between LLM agents. Interactive simulations and runnable Python.">
+<link rel="canonical" href="https://exponen-agi.github.io/jev-playground/agentic.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="jev-playground">
+<meta property="og:title" content="Agentic Systems with Jev">
+<meta property="og:description" content="Six multi-agent architectures with Jev making the decisions between LLM agents. Interactive simulations and runnable Python.">
+<meta property="og:url" content="https://exponen-agi.github.io/jev-playground/agentic.html">
+<meta name="theme-color" content="#d63c9e">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%278%27 fill=%27%23d63c9e%27/%3E%3Cpath d=%27M20 8v11a5 5 0 0 1-9 3%27 stroke=%27white%27 stroke-width=%273%27 fill=%27none%27 stroke-linecap=%27round%27/%3E%3C/svg%3E">
+<link rel="stylesheet" href="assets/sim.css">
+<style>
+  .rule { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 0 0 26px; }
+  .rule > div { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); padding: 14px 16px; border-top: 3px solid; }
+  .rule b { display: block; font-size: 14px; margin-bottom: 4px; }
+  .rule span { font-size: 13px; color: var(--muted); }
+  @media (max-width: 720px) { .rule { grid-template-columns: 1fr; } }
+  .card .links { margin-top: 12px; display: flex; gap: 14px; font-size: 12.5px; flex-wrap: wrap; }
+  .card .links span { color: var(--jev); font-weight: 600; }
+  .careful { margin: 0; padding-left: 18px; font-size: 13.5px; }
+  .careful li { margin: 6px 0; }
+  .careful b { font-weight: 650; }
+</style>
+</head>
+<body>
+<main class="wrap">
+  <a class="back" href="index.html">← all simulations</a>
+  <header class="top"><span class="eyebrow">jev-playground · agentic systems</span>
+    <span class="top-links">
+      <a class="repo-link" href="https://github.com/exponen-agi/jev-playground/tree/main/cookbooks"
+         aria-label="View the cookbooks on GitHub">
+        <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M4.72 3.22a.75.75 0 0 1 1.06 1.06L2.06 8l3.72 3.72a.75.75 0 1 1-1.06 1.06L.47 8.53a.75.75 0 0 1 0-1.06l4.25-4.25Zm6.56 0a.75.75 0 1 0-1.06 1.06L13.94 8l-3.72 3.72a.75.75 0 1 0 1.06 1.06l4.25-4.25a.75.75 0 0 0 0-1.06l-4.25-4.25Z"></path></svg><span class="label">The Python</span> <span class="mono">cookbooks/11–16</span>
+      </a>
+    </span>
+  </header>
+  <h1>Agentic systems: where Jev sits</h1>
+  <p class="lede">Every multi-agent system, however it is wired, is full of small decisions between
+  the agents. Is this output good enough to pass on? Who should go next? Does this conversation
+  belong to a different agent now? Is the agent going round in circles? Is it done? Those decisions
+  are usually made by another large model writing a string. Each of them is a typed, calibrated
+  question Jev can answer in a quarter of a second, and that holds whether the agents are arranged
+  in a line, side by side, or around a coordinator.</p>
+
+  <div class="rule">
+    <div style="border-top-color:var(--llm)"><b>LLM agents do the work</b><span>Read, plan, write, code, call tools. Nothing about them changes.</span></div>
+    <div style="border-top-color:var(--jev)"><b>Jev makes the decisions between them</b><span>One call per decision point, typed answers, a probability on every one.</span></div>
+    <div style="border-top-color:var(--code)"><b>Your code holds the thresholds</b><span>Branches, budgets, arithmetic, and every bar that controls risk.</span></div>
+  </div>
+
+  <div class="group-head"><h2>Six architectures</h2><span class="count">6 simulations · 6 cookbooks</span></div>
+  <p class="blurb" style="margin:0 0 14px;font-size:13.5px;color:var(--muted)">In each small diagram the pink diamonds are Jev, blue boxes are LLM agents, green
+  is code or done, and orange is a person.</p>
+  <div class="cards" id="cards">
+    <a class="card" href="11-sequential-pipeline.html">
+      <div class="num">11 · <span class="arch">Sequential</span></div>
+      <svg class="mini" role="img" aria-label="Sequential diagram" data-n="11"></svg>
+      <h3>Three desks, one claim</h3>
+      <p>Intake, assessor and letter agents in a line. A gate at every handoff passes the work on, sends it back once with a reason, or stops for a person.</p>
+      <div class="flow">agent → Jev → agent → Jev → agent → Jev</div>
+      <div class="links"><span>Open the simulation →</span><span style="color:var(--muted);font-weight:400" class="mono">11_sequential_pipeline.py</span></div>
+    </a>
+    <a class="card" href="12-parallel-fanout.html">
+      <div class="num">12 · <span class="arch">Parallel</span></div>
+      <svg class="mini" role="img" aria-label="Parallel diagram" data-n="12"></svg>
+      <h3>Four specialists, one verdict</h3>
+      <p>Jev picks which of four specialist agents this supplier needs. They run at the same time, and a second call merges their findings into one decision.</p>
+      <div class="flow">Jev plan → specialists in parallel → Jev merge</div>
+      <div class="links"><span>Open the simulation →</span><span style="color:var(--muted);font-weight:400" class="mono">12_parallel_due_diligence.py</span></div>
+    </a>
+    <a class="card" href="13-orchestrator-workers.html">
+      <div class="num">13 · <span class="arch">Orchestrator–workers</span></div>
+      <svg class="mini" role="img" aria-label="Orchestrator–workers diagram" data-n="13"></svg>
+      <h3>The foreman</h3>
+      <p>Jev is the supervisor. Every step it picks the next worker, checks the last output, and notices when the team is going round in circles.</p>
+      <div class="flow">Jev ⇄ researcher · coder · tester · reviewer</div>
+      <div class="links"><span>Open the simulation →</span><span style="color:var(--muted);font-weight:400" class="mono">13_orchestrator_workers.py</span></div>
+    </a>
+    <a class="card" href="14-agent-handoff.html">
+      <div class="num">14 · <span class="arch">Router / handoff</span></div>
+      <svg class="mini" role="img" aria-label="Router / handoff diagram" data-n="14"></svg>
+      <h3>Passing the customer on</h3>
+      <p>On every customer message, stay with the current agent or hand over. A margin in code stops agents passing the customer back and forth.</p>
+      <div class="flow">turn → Jev → stay · hand off · person</div>
+      <div class="links"><span>Open the simulation →</span><span style="color:var(--muted);font-weight:400" class="mono">14_agent_handoff.py</span></div>
+    </a>
+    <a class="card" href="15-evaluator-optimizer.html">
+      <div class="num">15 · <span class="arch">Evaluator–optimizer</span></div>
+      <svg class="mini" role="img" aria-label="Evaluator–optimizer diagram" data-n="15"></svg>
+      <h3>Write, judge, rewrite</h3>
+      <p>A writer agent drafts and Jev scores the draft on a five-part rubric. "Done" is a line of code, feedback names the failing checks, and the loop knows when to stop.</p>
+      <div class="flow">writer → Jev rubric → publish · rewrite · person</div>
+      <div class="links"><span>Open the simulation →</span><span style="color:var(--muted);font-weight:400" class="mono">15_evaluator_optimizer.py</span></div>
+    </a>
+    <a class="card" href="16-tool-agent-loop.html">
+      <div class="num">16 · <span class="arch">Tool-calling agent</span></div>
+      <svg class="mini" role="img" aria-label="Tool-calling agent diagram" data-n="16"></svg>
+      <h3>The agent on call</h3>
+      <p>An incident agent proposes commands. Jev checks each one for hazards, and also asks whether the agent is repeating itself and whether the incident has already cleared.</p>
+      <div class="flow">agent → Jev → run · confirm · block · nudge · stop</div>
+      <div class="links"><span>Open the simulation →</span><span style="color:var(--muted);font-weight:400" class="mono">16_tool_agent_loop.py</span></div>
+    </a>
+  </div>
+
+  <div class="panel" style="margin-top:26px">
+    <h2>Where the decision lives</h2>
+    <div class="table-scroll"><table class="rows">
+      <thead><tr><th>Architecture</th><th>Who decides today</th><th>What Jev decides instead</th><th>What stays in code</th></tr></thead>
+      <tbody>
+        <tr><td><b>Sequential</b></td><td>Nobody; the next stage trusts the last one. Or an LLM judge per stage.</td><td><code>grounded</code>, <code>complete</code>, stage-specific checks, at every handoff</td><td>Retry once with named feedback; stop the line</td></tr>
+        <tr><td><b>Parallel</b></td><td>Run every branch; an LLM summarises the results</td><td>Which branches to run; the severity and evidence of each result</td><td>Value thresholds; the merge rule</td></tr>
+        <tr><td><b>Orchestrator–workers</b></td><td>A supervisor LLM re-reads the transcript every turn</td><td><code>next_agent</code>, <code>last_output_ok</code>, <code>stuck</code>, <code>needs_external_action</code></td><td>Confidence floor, step budget</td></tr>
+        <tr><td><b>Router / handoff</b></td><td>An LLM names the next agent; no probability attached</td><td>Topic probabilities, <code>mid_task</code>, <code>wants_human</code>, frustration</td><td>The handoff margin: switch only on a clear win</td></tr>
+        <tr><td><b>Evaluator–optimizer</b></td><td>A critic LLM writes paragraphs; "done" is undefined</td><td>A five-part rubric, each part its own question</td><td>"Done" = every check past its bar; the feedback text; the round budget</td></tr>
+        <tr><td><b>Tool-calling agent</b></td><td>The agent itself, or a slow gate on every call</td><td>Hazards of the call, plus <code>repeats</code> and <code>resolved</code> about the loop</td><td>Per-hazard bars; nudge, then stop</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+
+  <div class="grid2">
+    <div class="panel">
+      <h2>The shape, in any architecture</h2>
+      <pre class="code" id="code"></pre>
+    </div>
+    <div class="panel">
+      <h2>Where to be careful</h2>
+      <ul class="careful">
+        <li><b>Send a compact state.</b> Accuracy drops as the state fills with material the question does not need, and agent transcripts grow fast. Send the task, the last output and a step count, not the history.</li>
+        <li><b>One judgement per question.</b> "Who's next, and is it safe?" is two questions. Ask both in the same call and combine them in code.</li>
+        <li><b>Agent output is untrusted input.</b> A worker that read a hostile web page can pass along text written to steer the router. Treat Jev as one layer of defence, not the only one.</li>
+        <li><b>Calibrate on your own runs.</b> Calibration is a property of many answers taken together. Log answers next to outcomes, and set each bar from that log.</li>
+        <li><b>Jev doesn't plan or write.</b> It chooses between options you name. Breaking a goal into steps and producing the text stay with the LLM agents.</li>
+        <li><b>Pin the version</b> (<code>jev-1.13.0</code>) so a new release cannot quietly move your thresholds.</li>
+      </ul>
+    </div>
+  </div>
+
+  <p class="note">Each simulation matches the runnable Python in <code>cookbooks/11–16</code>. In the
+  cookbooks the LLM agents use whichever provider key you have set, and fall back to scripted sample output
+  when none is set, so the Jev half runs with only <code>TYPESAFE_API_KEY</code>. The numbers in the
+  simulations are illustrative, not measured.</p>
+</main>
+
+<script type="text/plain" id="py">
+# Between the agents, in all six architectures:
+while not finished(state):
+    a = jev.system_one(state=compact(state),   # small state
+                       questions=DECISION).answers
+    branch = policy(a, THRESHOLDS)     # plain code
+    state = AGENTS[branch].run(state)  # an LLM works
+</script>
+
+<script src="assets/d3-mini.js"></script>
+<script type="module">
+import { $, renderCode } from "./assets/sim.js";
+
+renderCode($("#code"), $("#py").textContent);
+
+// Tiny diagrams for the cards above: [kind, x, y, label]. Kinds: io, llm, jev, code, human. Edges: [from, to, style].
+const ARCH = [
+  { n: "11", arch: "Sequential",
+    nodes: [["io", 16, 50, ""], ["llm", 62, 50, "A"], ["jev", 108, 50], ["llm", 154, 50, "A"], ["jev", 200, 50], ["llm", 246, 50, "A"], ["jev", 290, 50], ["human", 200, 104, ""], ["code", 330, 50, ""]],
+    edges: [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [6, 8], [2, 7, "d"], [4, 7, "d"], [6, 7, "d"], [2, 1, "back"], [4, 3, "back"], [6, 5, "back"]] },
+  { n: "12", arch: "Parallel",
+    nodes: [["io", 16, 60, ""], ["jev", 70, 60], ["llm", 170, 14, "A"], ["llm", 170, 45, "A"], ["llm", 170, 76, "A"], ["llm", 170, 107, "A"], ["jev", 270, 60], ["code", 330, 60, ""]],
+    edges: [[0, 1], [1, 2], [1, 3], [1, 4, "d"], [1, 5], [2, 6], [3, 6], [5, 6], [6, 7]] },
+  { n: "13", arch: "Orchestrator–workers",
+    nodes: [["io", 16, 60, ""], ["jev", 110, 60], ["llm", 230, 12, "A"], ["llm", 260, 44, "A"], ["llm", 260, 78, "A"], ["llm", 230, 110, "A"], ["code", 330, 40, ""], ["human", 330, 84, ""]],
+    edges: [[0, 1], [1, 2, "both"], [1, 3, "both"], [1, 4, "both"], [1, 5, "both"], [1, 6, "d"], [1, 7, "d"]] },
+  { n: "14", arch: "Router / handoff",
+    nodes: [["io", 16, 60, ""], ["jev", 90, 60], ["llm", 200, 14, "A"], ["llm", 200, 45, "A"], ["llm", 200, 76, "A"], ["llm", 200, 107, "A"], ["human", 310, 60, ""]],
+    edges: [[0, 1], [1, 2], [1, 3, "d"], [1, 4], [1, 5, "d"], [1, 6, "d"]] },
+  { n: "15", arch: "Evaluator–optimizer",
+    nodes: [["io", 16, 50, ""], ["llm", 90, 50, "A"], ["jev", 200, 50], ["code", 310, 22, ""], ["human", 310, 80, ""]],
+    edges: [[0, 1], [1, 2], [2, 3], [2, 4, "d"], [2, 1, "loop"]] },
+  { n: "16", arch: "Tool-calling agent",
+    nodes: [["io", 16, 50, ""], ["llm", 90, 50, "A"], ["jev", 200, 50], ["code", 310, 22, ""], ["human", 310, 80, ""]],
+    edges: [[0, 1], [1, 2], [2, 3], [2, 4, "d"], [3, 1, "loop"]] },
+];
+
+const COLOUR = { io: "--line", llm: "--llm", jev: "--jev", code: "--code", human: "--human" };
+function mini(svgEl, a) {
+  const svg = d3.select(svgEl).attr("viewBox", "0 0 346 124");
+  const id = "m" + a.n;
+  svg.append("defs").append("marker").attr("id", id).attr("viewBox", "0 0 8 8").attr("refX", 7).attr("refY", 4)
+    .attr("markerWidth", 5).attr("markerHeight", 5).attr("orient", "auto")
+    .append("path").attr("d", "M0,0 L8,4 L0,8 Z").attr("fill", "var(--muted)");
+  const P = a.nodes;
+  a.edges.forEach(([f, t, style]) => {
+    const [x1, y1] = [P[f][1], P[f][2]], [x2, y2] = [P[t][1], P[t][2]];
+    let d;
+    if (style === "back") d = `M${x1},${y1 - 10} C${x1},${y1 - 34} ${x2},${y2 - 34} ${x2},${y2 - 12}`;
+    else if (style === "loop") d = `M${x1},${y1 + 12} C${x1},${y1 + 52} ${x2},${y2 + 52} ${x2},${y2 + 12}`;
+    else { const mx = (x1 + x2) / 2; d = `M${x1 + 12},${y1} C${mx},${y1} ${mx},${y2} ${x2 - 13},${y2}`; }
+    svg.append("path").attr("d", d).attr("fill", "none").attr("stroke", "var(--muted)").attr("stroke-opacity", .55)
+      .attr("stroke-width", 1.3).attr("stroke-dasharray", style === "d" || style === "back" || style === "loop" ? "3 3" : null)
+      .attr("marker-end", `url(#${id})`).attr("marker-start", style === "both" ? `url(#${id})` : null);
+  });
+  P.forEach(([kind, x, y]) => {
+    const c = `var(${COLOUR[kind]})`;
+    if (kind === "jev") svg.append("rect").attr("x", x - 10).attr("y", y - 10).attr("width", 20).attr("height", 20).attr("rx", 3)
+      .attr("transform", `rotate(45 ${x} ${y})`).attr("fill", c);
+    else if (kind === "llm") svg.append("rect").attr("x", x - 13).attr("y", y - 10).attr("width", 26).attr("height", 20).attr("rx", 4)
+      .attr("fill", "var(--panel)").attr("stroke", c).attr("stroke-width", 1.6);
+    else svg.append("circle").attr("cx", x).attr("cy", y).attr("r", kind === "io" ? 7 : 9)
+      .attr("fill", kind === "io" ? "var(--bg)" : c).attr("stroke", kind === "io" ? "var(--muted)" : "none");
+  });
+}
+
+ARCH.forEach((a) => mini(document.querySelector(`svg.mini[data-n="${a.n}"]`), a));
+</script>
+</body>
+</html>

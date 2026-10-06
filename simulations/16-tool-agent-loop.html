@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tool-Calling Agent Loop</title>
+<meta name="description" content="An incident-response AI agent proposes commands one at a time. Jev checks every call for hazards and also watches the loop: is the agent repeating itself, and has the incident already cleared?">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%278%27 fill=%27%23d63c9e%27/%3E%3Cpath d=%27M20 8v11a5 5 0 0 1-9 3%27 stroke=%27white%27 stroke-width=%273%27 fill=%27none%27 stroke-linecap=%27round%27/%3E%3C/svg%3E">
+<link rel="stylesheet" href="assets/sim.css">
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="agentic.html">← agentic systems</a>
+  <div class="top"><span class="eyebrow">Agentic · Tool-calling agent · Cookbook 16</span>
+    <span class="top-links">
+      <a class="repo-link" href="https://github.com/exponen-agi/jev-playground/blob/main/cookbooks/16_tool_agent_loop.py"
+         aria-label="View the Python source for cookbook 16 on GitHub">
+        <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M4.72 3.22a.75.75 0 0 1 1.06 1.06L2.06 8l3.72 3.72a.75.75 0 1 1-1.06 1.06L.47 8.53a.75.75 0 0 1 0-1.06l4.25-4.25Zm6.56 0a.75.75 0 1 0-1.06 1.06L13.94 8l-3.72 3.72a.75.75 0 1 0 1.06 1.06l4.25-4.25a.75.75 0 0 0 0-1.06l-4.25-4.25Z"></path></svg><span class="label">The Python</span> <span class="mono">16_tool_agent_loop.py</span>
+      </a>
+    </span>
+  </div>
+  <h1>The agent on call</h1>
+  <p class="lede">An alert fires: checkout is slow. An AI agent investigates by running commands,
+  one at a time. Jev checks every command before it runs: could it destroy something, does it
+  touch production, how much breaks if it is wrong? It also asks two questions no single-command
+  check can answer. Is the agent repeating itself? Has the problem already gone away?</p>
+
+  <div class="panel">
+    <div class="controls">
+      <button id="play" class="primary">▶  Play</button>
+      <button id="step">Step</button>
+      <button id="reset">Reset</button>
+      <div class="spacer"></div>
+      <label class="ctl">Loop bar <input id="loop" type="range" min="0.5" max="0.95" step="0.05" value="0.75"><span class="val" id="loop-v">0.75</span></label>
+      <label class="ctl">Destructive bar <input id="dest" type="range" min="0.3" max="0.95" step="0.05" value="0.6"><span class="val" id="dest-v">0.60</span></label>
+      <label class="ctl">Speed <input id="speed" type="range" min="0.5" max="4" step="0.5" value="1"></label>
+    </div>
+    <div class="stage-scroll"><svg id="stage" viewBox="0 0 960 330" role="img"
+         aria-label="An agent proposes a call. Jev sends it to run, ask on-call, blocked, nudge, or stop because the incident is resolved."></svg></div>
+    <div class="legend">
+      <span><i style="background:var(--llm)"></i>The agent (LLM) proposing calls</span>
+      <span><i style="background:var(--jev)"></i>Jev: five questions per call</span>
+      <span><i style="background:var(--human)"></i>On-call engineer</span>
+      <span><i style="background:var(--danger)"></i>Blocked</span>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="panel">
+      <h2>This call <span class="sub" id="c-title"></span></h2>
+      <div id="call" class="mono" style="font-size:12.5px;background:var(--bg);border:1px solid var(--line);
+           border-radius:9px;padding:12px;min-height:48px;overflow-wrap:anywhere">Press <b style="font-family:var(--sans)">Play</b>.</div>
+      <div id="read" style="margin-top:12px"></div>
+    </div>
+    <div class="panel">
+      <h2>The incident so far</h2>
+      <div class="stats">
+        <div class="stat" data-stat="ran"><div class="k">Calls run</div><div class="v">0</div><div class="n">of 0 proposed</div></div>
+        <div class="stat" data-stat="asked"><div class="k">Asked on-call</div><div class="v">0</div><div class="n">confirm or approve</div></div>
+        <div class="stat" data-stat="wasted"><div class="k">Repeat calls run</div><div class="v">0</div><div class="n">no new information</div></div>
+        <div class="stat" data-stat="unasked"><div class="k">Risky, unasked</div><div class="v">0</div><div class="n">destructive, ran alone</div></div>
+        <div class="stat" data-stat="clock"><div class="k">Incident clock</div><div class="v">0m</div><div class="n">illustrative</div></div>
+      </div>
+      <p class="note" id="verdict">Raise the <b>loop bar</b> past 0.85 and the agent reads the same logs
+      three times. Raise the <b>destructive bar</b> past 0.80 and it deletes a pod without asking anyone.
+      The whole run is recomputed live.</p>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="panel">
+      <h2>The code <span class="sub">· lines this call ran are highlighted</span></h2>
+      <pre class="code" id="code"></pre>
+    </div>
+    <div class="panel">
+      <h2>Every call <span class="sub">· at the current bars</span></h2>
+      <div class="table-scroll"><table class="rows" id="table">
+        <thead><tr><th>#</th><th>Call</th><th>Verdict</th><th>rep</th><th>res</th></tr></thead>
+        <tbody></tbody>
+      </table></div>
+    </div>
+  </div>
+
+  <p class="note">The numbers are illustrative, not measured, and nothing here touches a real cluster. The
+  single-call version of this gate is <a href="03-agent-guardrails.html">03 · The checkpoint</a>. ←
+  <a href="15-evaluator-optimizer.html">15 · Write, judge, rewrite</a> ·
+  <a href="agentic.html">All six architectures</a> →</p>
+</div>
+
+<script type="text/plain" id="py">
+LOOP_BAR = {LOOP}            # slider
+DESTRUCTIVE_BAR = {DEST}     # slider
+
+a = jev.system_one(state={"alert": alert, "proposed": call,   #@jev
+                          "recent": recent[-4:]},             #@jev
+                   questions=STEP).answers                    #@jev
+if a["resolved"].noul > 0.80:                       #@resolved
+    return STOP_DONE     # LLM writes the incident note  #@resolved
+streak = streak + 1 if a["repeats"].noul > LOOP_BAR else 0
+if streak >= 2:
+    if nudged: return STOP_LOOP   # hand trace to on-call  #@stoploop
+    return NUDGE         # skip it: "try something else"  #@nudge
+if (a["prod_write"].noul > 0.5                       #@block
+        or a["blast_radius"].score > 1.5):            #@block
+    return BLOCK         # needs approval                 #@block
+if a["destructive"].noul > DESTRUCTIVE_BAR:          #@confirm
+    return CONFIRM       # ask on-call first             #@confirm
+return RUN                                           #@run
+</script>
+
+<script src="assets/d3-mini.js"></script>
+<script type="module">
+import { $, Ticker, wireControls, setStat, dur, renderCode, markCode, travel } from "./assets/sim.js";
+
+// d: destructive, pw: prod_write, br: blast_radius (0–2), rep: repeats, res: resolved.
+// waste: ground truth for the demo, a call that adds nothing new.
+const S = [
+  { c: "metrics(service=checkout, window=30m)", r: "p95 2.8s since 14:02; error rate flat", d: .02, pw: .02, br: .3, rep: .03, res: .04 },
+  { c: "kubectl_logs(pod=checkout-7f9, tail=200)", r: "repeated 'connection pool exhausted (db-primary)'", d: .02, pw: .02, br: .1, rep: .05, res: .03 },
+  { c: "kubectl_logs(pod=checkout-7f9, tail=200)", r: "the same lines again", d: .02, pw: .02, br: .1, rep: .81, res: .03, waste: true },
+  { c: "kubectl_logs(pod=checkout-7f9, tail=500)", r: "the same lines, more of them", d: .02, pw: .02, br: .1, rep: .86, res: .03, waste: true },
+  { c: "db_pool_stats(db=db-primary)", r: "100/100 in use; 80 idle in transaction, all from reports-job", d: .03, pw: .03, br: .2, rep: .08, res: .05 },
+  { c: "kubectl_scale(deployment=db-proxy, replicas=0)", r: "(would take the database proxy down)", d: .92, pw: .95, br: 1.85, rep: .04, res: .05 },
+  { c: "kubectl_delete_pod(pod=reports-job-5c2)", r: "pod deleted; 80 connections released", d: .78, pw: .38, br: .35, rep: .03, res: .1 },
+  { c: "metrics(service=checkout, window=10m)", r: "p95 310ms since 14:31", d: .02, pw: .02, br: .3, rep: .3, res: .62 },
+  { c: "metrics(service=checkout, window=5m)", r: "p95 290ms", d: .02, pw: .02, br: .3, rep: .55, res: .91 },
+];
+const V = {
+  run: ["run", "ok", "Run the tool", "--code", 45], confirm: ["confirm", "human", "Ask on-call first", "--human", 120],
+  block: ["block", "bad", "Blocked: needs approval", "--danger", 60], nudge: ["nudge", "retry", "Nudge: skip it", "--llm", 5],
+  stoploop: ["stop: looping", "human", "Stop: hand to on-call", "--human", 0], resolved: ["stop: resolved", "ok", "Stop: write the note", "--code", 30],
+};
+const OUT = ["run", "confirm", "block", "nudge", "resolved"];
+
+function run(loopBar, destBar) {
+  let streak = 0, nudged = false;
+  const rows = [];
+  for (const s of S) {
+    let v;
+    if (s.res > .8) v = "resolved";
+    else {
+      streak = s.rep > loopBar ? streak + 1 : 0;
+      if (streak >= 2) { v = nudged ? "stoploop" : "nudge"; if (!nudged) { nudged = true; streak = 0; } }
+      else if (s.pw > .5 || s.br > 1.5) v = "block";
+      else if (s.d > destBar) v = "confirm";
+      else v = "run";
+    }
+    rows.push({ s, v, unasked: v === "run" && s.d > .6, streak: v === "nudge" || v === "stoploop" ? 2 : Math.min(streak, 2) });
+    if (v === "resolved" || v === "stoploop") break;
+  }
+  return rows;
+}
+
+// ------------------------------------------------------------------ drawing
+const svg = d3.select("#stage");
+svg.append("defs").append("marker").attr("id", "a16").attr("viewBox", "0 0 8 8").attr("refX", 7)
+  .attr("refY", 4).attr("markerWidth", 6).attr("markerHeight", 6).attr("orient", "auto")
+  .append("path").attr("d", "M0,0 L8,4 L0,8 Z").attr("fill", "var(--muted)");
+const text = (x, y, s, o = {}) => svg.append("text").attr("x", x).attr("y", y).attr("text-anchor", o.a || "middle")
+  .attr("font-size", o.size || 12).attr("font-weight", o.w || 400).attr("fill", o.fill || "var(--ink)")
+  .attr("font-family", o.mono ? "var(--mono)" : null).text(s);
+const AY = 160, JX = 330, OX = 510, OY = (k) => 36 + k * 62;
+svg.append("rect").attr("x", 30).attr("y", AY - 34).attr("width", 170).attr("height", 68).attr("rx", 10)
+  .attr("fill", "var(--panel)").attr("stroke", "var(--llm)").attr("stroke-width", 1.5);
+text(115, AY - 8, "Incident agent", { w: 620, size: 13 });
+text(115, AY + 12, "LLM · proposes the next call", { size: 10.5, fill: "var(--muted)" });
+svg.append("path").attr("id", "p-prop").attr("d", `M200,${AY} L${JX - 40},${AY}`).attr("stroke", "var(--line)")
+  .attr("stroke-width", 1.8).attr("fill", "none").attr("marker-end", "url(#a16)");
+svg.append("path").attr("id", "p-back").attr("d", `M${OX},${OY(3) + 30} C${OX - 160},${318} 130,${318} 115,${AY + 38}`)
+  .attr("stroke", "var(--line)").attr("stroke-width", 1.5).attr("stroke-dasharray", "4 4").attr("fill", "none").attr("marker-end", "url(#a16)");
+text(300, 314, "result, or the reason it was not run, goes back to the agent", { size: 10.5, fill: "var(--muted)" });
+svg.append("rect").attr("x", JX - 32).attr("y", AY - 32).attr("width", 64).attr("height", 64).attr("rx", 9)
+  .attr("transform", `rotate(45 ${JX} ${AY})`).attr("fill", "var(--jev)");
+text(JX, AY - 3, "Jev", { size: 14, w: 700, fill: "#fff" });
+text(JX, AY + 13, "call + loop", { size: 9.5, fill: "#fff" });
+const pulse = svg.append("rect").attr("x", JX - 32).attr("y", AY - 32).attr("width", 64).attr("height", 64).attr("rx", 9)
+  .attr("transform", `rotate(45 ${JX} ${AY})`).attr("fill", "none").attr("stroke", "var(--jev)").attr("stroke-width", 3).attr("opacity", 0);
+const counts = {};
+OUT.forEach((o, k) => {
+  const y = OY(k), [, , label, c] = V[o];
+  svg.append("path").attr("id", `p-${o}`).attr("d", `M${JX + 44},${AY} C${JX + 110},${AY} ${OX - 80},${y} ${OX - 4},${y}`)
+    .attr("stroke", "var(--line)").attr("stroke-width", 1.6).attr("fill", "none").attr("marker-end", "url(#a16)");
+  svg.append("rect").attr("x", OX).attr("y", y - 22).attr("width", 220).attr("height", 44).attr("rx", 9)
+    .attr("fill", "var(--panel)").attr("stroke", `var(${c})`).attr("stroke-width", 1.5);
+  text(OX + 14, y + 4, label, { a: "start", size: 12, w: 620 });
+  counts[o] = text(OX + 206, y + 5, "0", { a: "end", size: 15, w: 650, mono: true, fill: `var(${c})` });
+});
+svg.append("path").attr("id", "p-stoploop").attr("d", `M${JX},${AY + 44} L${JX},${AY + 44}`).attr("fill", "none");
+// incident clock
+svg.append("rect").attr("x", 770).attr("y", 60).attr("width", 170).attr("height", 200).attr("rx", 12)
+  .attr("fill", "var(--bg)").attr("stroke", "var(--line)");
+text(855, 92, "Incident clock", { w: 600, size: 12.5 });
+const clockT = text(855, 140, "0m", { size: 34, w: 700, mono: true, fill: "var(--ink)" });
+text(855, 168, "loop streak", { size: 10.5, fill: "var(--muted)" });
+const streakDots = [0, 1].map((j) => svg.append("circle").attr("cx", 840 + j * 30).attr("cy", 188).attr("r", 8)
+  .attr("fill", "var(--line-soft)").attr("stroke", "var(--line)"));
+const stateT = text(855, 230, "", { size: 11.5, w: 650, fill: "var(--muted)" });
+
+// ------------------------------------------------------------------ state
+const SRC = $("#py").textContent, code = $("#code");
+const loopBar = () => Number($("#loop").value), destBar = () => Number($("#dest").value);
+let n = 0;
+
+function refresh(animate = false) {
+  $("#loop-v").textContent = loopBar().toFixed(2); $("#dest-v").textContent = destBar().toFixed(2);
+  renderCode(code, SRC.replace("{LOOP}", loopBar().toFixed(2)).replace("{DEST}", destBar().toFixed(2)));
+  const all = run(loopBar(), destBar()), rows = all.slice(0, n);
+  const c = Object.fromEntries(OUT.map((o) => [o, 0]));
+  rows.forEach((r) => { if (r.v in c) c[r.v]++; });
+  OUT.forEach((o) => counts[o].text(c[o]));
+  const minutes = rows.reduce((t, r) => t + V[r.v][4], 0) / 60;
+  setStat("ran", rows.filter((r) => r.v === "run" || r.v === "confirm").length, `of ${rows.length} proposed`);
+  setStat("asked", rows.filter((r) => r.v === "confirm" || r.v === "block").length);
+  setStat("wasted", rows.filter((r) => r.s.waste && (r.v === "run" || r.v === "confirm")).length);
+  setStat("unasked", rows.filter((r) => r.unasked).length);
+  setStat("clock", Math.round(minutes) + "m");
+  clockT.text(Math.round(minutes) + "m");
+  $("#table tbody").innerHTML = rows.map((r, j) => `<tr><td class="tick">${j + 1}</td><td class="mono" style="font-size:11.5px">${r.s.c.replace(/\(.*/, "")}</td>
+    <td><span class="chip ${r.unasked ? "bad" : V[r.v][1]}">${V[r.v][0]}${r.unasked ? " · unasked" : ""}</span></td>
+    <td class="tick" style="color:${r.s.rep > loopBar() ? "var(--danger)" : "inherit"}">${r.s.rep.toFixed(2)}</td>
+    <td class="tick" style="color:${r.s.res > .8 ? "var(--code)" : "inherit"}">${r.s.res.toFixed(2)}</td></tr>`).join("");
+  const last = rows[rows.length - 1];
+  streakDots.forEach((dot, j) => dot.attr("fill", last && j < last.streak ? "var(--danger)" : "var(--line-soft)"));
+  stateT.text(!last ? "" : last.v === "resolved" ? "resolved" : last.v === "stoploop" ? "handed to on-call" : n >= all.length ? "" : "investigating")
+    .attr("fill", last && last.v === "resolved" ? "var(--code)" : "var(--muted)");
+  if (last) {
+    const s = last.s;
+    $("#c-title").textContent = `· call ${rows.length}`;
+    $("#call").textContent = s.c;
+    const bar = (label, v, max, hot) => `<div style="display:grid;grid-template-columns:96px 1fr 40px;gap:8px;align-items:center;margin:5px 0;font-size:12px">
+      <span style="color:var(--muted)">${label}</span><div class="bar"><span style="width:${(v / max) * 100}%;background:var(${hot ? "--danger" : "--jev"})"></span></div>
+      <span class="tick" style="text-align:right">${v.toFixed(2)}</span></div>`;
+    $("#read").innerHTML = `<div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-weight:700">about the call</div>` +
+      bar("destructive", s.d, 1, s.d > destBar()) + bar("prod_write", s.pw, 1, s.pw > .5) + bar("blast_radius", s.br, 2, s.br > 1.5) +
+      `<div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-weight:700;margin-top:10px">about the loop</div>` +
+      bar("repeats", s.rep, 1, s.rep > loopBar()) + bar("resolved", s.res, 1, false) +
+      `<p class="note" style="margin-top:10px"><span class="chip ${last.unasked ? "bad" : V[last.v][1]}">${V[last.v][0]}</span>
+       ${last.v === "run" || last.v === "confirm" || last.v === "resolved" ? "→ " + s.r : last.v === "nudge" ? "→ skipped; the agent is told it already has this result" : last.v === "block" ? "→ not run; needs an approver" : "→ the agent is stopped and on-call gets the trace"}</p>`;
+    markCode(code, "jev", last.v);
+    if (animate) {
+      travel(svg, document.getElementById("p-prop"), "var(--llm)", { ms: 380 });
+      pulse.transition().delay(dur(380)).duration(0).attr("opacity", .9).transition().duration(dur(380)).attr("opacity", 0);
+      const to = last.v === "stoploop" ? "nudge" : last.v;
+      travel(svg, document.getElementById(`p-${to}`), `var(${V[last.v][3]})`, { ms: 480, delay: 420 });
+      if (last.v !== "resolved" && last.v !== "stoploop") travel(svg, document.getElementById("p-back"), "var(--muted)", { ms: 600, delay: 950, r: 5 });
+    }
+  }
+  if (n >= all.length) {
+    const wasted = rows.filter((r) => r.s.waste && (r.v === "run" || r.v === "confirm")).length, unasked = rows.filter((r) => r.unasked).length;
+    $("#verdict").innerHTML = unasked
+      ? `The agent deleted a pod <b>without asking anyone</b>: at a destructive bar of ${destBar().toFixed(2)}, a 0.78 does not count as destructive. Bars are a risk decision, so set this one with the person who gets paged.`
+      : wasted > 1
+        ? `The agent re-ran a log read it already had <b>${wasted} extra times</b>. Every one passed the per-call checks because each one is harmless. Only the loop question catches it.`
+        : `<b>${rows.length}</b> calls, ${Math.round(minutes)} minutes. The repeated log read was skipped with a nudge, the database proxy was never scaled to zero, the pod deletion waited for a yes, and the agent <b>stopped as soon as the evidence showed the incident had cleared</b>.`;
+  }
+}
+
+function tick() {
+  if (n >= run(loopBar(), destBar()).length) { ticker.pause(); paint(); return; }
+  n++; refresh(true);
+}
+
+const ticker = new Ticker(tick, 1700);
+const paint = wireControls({
+  ticker, playBtn: $("#play"), stepBtn: $("#step"), resetBtn: $("#reset"), speedInput: $("#speed"),
+  onReset() {
+    n = 0; $("#c-title").textContent = ""; $("#read").innerHTML = "";
+    $("#call").innerHTML = `Press <b style="font-family:var(--sans)">Play</b>.`;
+    markCode(code);
+    refresh();
+  },
+});
+$("#loop").addEventListener("input", () => refresh());
+$("#dest").addEventListener("input", () => refresh());
+refresh();
+</script>
+</body>
+</html>

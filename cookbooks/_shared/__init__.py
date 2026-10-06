@@ -1,5 +1,6 @@
 """Shared plumbing for the cookbooks. Nothing clever lives here."""
 
+from .agents import Agent, agent_text, run_parallel
 from .clients import (
     MissingKey,
     anthropic_text,
@@ -13,6 +14,9 @@ from .clients import (
 )
 
 __all__ = [
+    "Agent",
+    "agent_text",
+    "run_parallel",
     "MissingKey",
     "anthropic_text",
     "gemini_text",

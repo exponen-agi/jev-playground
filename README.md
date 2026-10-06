@@ -4,7 +4,7 @@
 
 **A working engineer's playground for Jev — TypeSafe's System One model.**
 
-Runnable cookbooks, a plain-English guide, and ten interactive simulations of what a
+Runnable cookbooks, a plain-English guide, and sixteen interactive simulations of what a
 fast, calibrated, *typed* decision model changes about your architecture — including
 inside systems you already built around OpenAI, Claude, or Gemini.
 
@@ -24,7 +24,7 @@ inside systems you already built around OpenAI, Claude, or Gemini.
 
 ## See it before you read it
 
-Ten interactive simulations, built so a non-technical colleague can follow the flow.
+Sixteen interactive simulations, built so a non-technical colleague can follow the flow.
 **No install, no API key, nothing is actually called.** Press play, drag a threshold,
 watch the routing change. Every page links straight to the Python it is built from.
 
@@ -62,6 +62,17 @@ watch the routing change. Every page links straight to the Python it is built fr
 | **03** | [The checkpoint](https://exponen-agi.github.io/jev-playground/03-agent-guardrails.html) | Gating an AI agent's tool calls on four hazards | Move each hazard limit |
 | **06** | [Picking the right brain](https://exponen-agi.github.io/jev-playground/06-model-router.html) | Routing across GPT, Claude, Gemini — or no model | Watch the split |
 
+**Agentic systems** — Jev making the decisions *between* LLM agents, one use case per architecture ([overview](https://exponen-agi.github.io/jev-playground/agentic.html))
+
+| | Simulation | Architecture | Try |
+|---|---|---|---|
+| **11** | [Three desks, one claim](https://exponen-agi.github.io/jev-playground/11-sequential-pipeline.html) | Sequential: a gate at every handoff | Drag the grounding bar; watch invented facts slip through or get caught |
+| **12** | [Four specialists, one verdict](https://exponen-agi.github.io/jev-playground/12-parallel-fanout.html) | Parallel: Jev plans the fan-out and merges it | Toggle "Jev picks" vs "Run all four" |
+| **13** | [The foreman](https://exponen-agi.github.io/jev-playground/13-orchestrator-workers.html) | Orchestrator–workers: Jev is the supervisor | Raise the confidence floor; shrink the step budget |
+| **14** | [Passing the customer on](https://exponen-agi.github.io/jev-playground/14-agent-handoff.html) | Router / handoff between agents | Drag the handoff margin; watch the ping-pong appear |
+| **15** | [Write, judge, rewrite](https://exponen-agi.github.io/jev-playground/15-evaluator-optimizer.html) | Evaluator–optimizer: Jev is the rubric | Raise the quality bar; watch rounds stop paying |
+| **16** | [The agent on call](https://exponen-agi.github.io/jev-playground/16-tool-agent-loop.html) | Tool-calling agent: hazards *and* the loop | Raise the loop bar; the agent re-reads the same logs |
+
 > Prefer to run them locally? `git clone`, then open `simulations/index.html`.
 > The numbers in them are illustrative, not measured.
 
@@ -85,6 +96,7 @@ watch the routing change. Every page links straight to the Python it is built fr
 - [The numbers, and how much weight to put on them](#the-numbers-and-how-much-weight-to-put-on-them)
 - [Where it breaks](#where-it-breaks)
 - [Cookbooks: Jev + your existing LLM](#cookbooks-jev--your-existing-llm)
+- [Agentic systems: Jev between the agents](#agentic-systems-jev-between-the-agents)
 - [Running the demos locally](#running-the-demos-locally)
 - [Setup](#setup)
 - [How to pilot this without betting anything](#how-to-pilot-this-without-betting-anything)
@@ -630,6 +642,45 @@ currently doing by hand, every day:*
 | [10](./cookbooks/10_bookkeeping.py) | **Bank transactions** | Jev categorises at scale → LLM writes the month-end note | The one where calibration *is* the product — and the one cookbook that ships a `calibration_report()` to check the confidence number against your own history before trusting it. |
 
 **Start here:** [`cookbooks/README.md`](./cookbooks/README.md)
+
+---
+
+## Agentic systems: Jev between the agents
+
+A multi-agent system is LLM agents doing the work, plus a stream of small decisions *between*
+them: is this output good enough to pass on, who goes next, does this conversation belong to
+another agent now, is it done, is it looping. Most frameworks hand those decisions to another
+LLM writing a string. Each one is a typed, calibrated question, which is exactly Jev's shape —
+and it fits every common architecture, not just one.
+
+> **LLM agents do the work. Jev makes the decisions between them. Your code holds the thresholds.**
+
+| # | Architecture | Cookbook | What Jev decides | What stays in code |
+|---|---|---|---|---|
+| [11](./cookbooks/11_sequential_pipeline.py) · [▶]({L}11-sequential-pipeline.html) | **Sequential** | Insurance claim: intake → assessor → letter | `grounded`, `complete` and stage-specific checks at every handoff | Retry once with feedback named by the failing check; stop the line |
+| [12](./cookbooks/12_parallel_due_diligence.py) · [▶]({L}12-parallel-fanout.html) | **Parallel** | Vendor due diligence: four specialists | Which specialists to run; severity and evidence of each finding | Contract-value rules; the merge rule |
+| [13](./cookbooks/13_orchestrator_workers.py) · [▶]({L}13-orchestrator-workers.html) | **Orchestrator–workers** | Bug fix: researcher, coder, tester, reviewer | `next_agent`, `last_output_ok`, `stuck`, `needs_external_action` — one call per step | Confidence floor, step budget |
+| [14](./cookbooks/14_agent_handoff.py) · [▶]({L}14-agent-handoff.html) | **Router / handoff** | Travel assistant: concierge, flights, hotels, refunds | Topic probabilities, `mid_task`, `wants_human`, frustration | A handoff margin, so agents don't pass the customer back and forth |
+| [15](./cookbooks/15_evaluator_optimizer.py) · [▶]({L}15-evaluator-optimizer.html) | **Evaluator–optimizer** | Product copy: writer ⇄ rubric | Five rubric questions, each with its own bar | "Done" is a line of code; the feedback text; the round budget |
+| [16](./cookbooks/16_tool_agent_loop.py) · [▶]({L}16-tool-agent-loop.html) | **Tool-calling agent** | Incident response | Hazards of each call *plus* `repeats` and `resolved` about the loop | Per-hazard bars; nudge once, then stop |
+
+```python
+# The same four lines sit between the agents in all six.
+while not finished(state):
+    a = jev.system_one(state=compact(state), questions=DECISION).answers  # small state in, typed answers out
+    branch = policy(a, THRESHOLDS)                                        # plain code, readable bars
+    state = AGENTS[branch].run(state)                                     # an LLM does the work
+```
+
+The worker agents call whichever provider key you have set, and fall back to scripted sample
+output when none is set, so every agentic cookbook's Jev half runs with only `TYPESAFE_API_KEY`.
+
+Be careful about the same things in all six: send the decision a **compact** state (task, last
+output, step count — not the transcript), ask **one judgement per question**, treat agent output
+as **untrusted input** that can try to steer the router, and **calibrate the bars on your own
+logged runs** before trusting them.
+
+**Overview page:** [Agentic systems: where Jev sits]({L}agentic.html)
 
 ### The shape they all share
 
