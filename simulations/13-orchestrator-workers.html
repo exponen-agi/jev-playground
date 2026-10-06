@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Orchestrator and Workers</title>
+<meta name="description" content="Four LLM workers fix bugs together. Jev is the orchestrator: on every step it picks who goes next, checks the last output, and notices when the team is going round in circles.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%278%27 fill=%27%23d63c9e%27/%3E%3Cpath d=%27M20 8v11a5 5 0 0 1-9 3%27 stroke=%27white%27 stroke-width=%273%27 fill=%27none%27 stroke-linecap=%27round%27/%3E%3C/svg%3E">
+<link rel="stylesheet" href="assets/sim.css">
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="agentic.html">← agentic systems</a>
+  <div class="top"><span class="eyebrow">Agentic · Orchestrator–workers · Cookbook 13</span>
+    <span class="top-links">
+      <a class="repo-link" href="https://github.com/exponen-agi/jev-playground/blob/main/cookbooks/13_orchestrator_workers.py"
+         aria-label="View the Python source for cookbook 13 on GitHub">
+        <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M4.72 3.22a.75.75 0 0 1 1.06 1.06L2.06 8l3.72 3.72a.75.75 0 1 1-1.06 1.06L.47 8.53a.75.75 0 0 1 0-1.06l4.25-4.25Zm6.56 0a.75.75 0 1 0-1.06 1.06L13.94 8l-3.72 3.72a.75.75 0 1 0 1.06 1.06l4.25-4.25a.75.75 0 0 0 0-1.06l-4.25-4.25Z"></path></svg><span class="label">The Python</span> <span class="mono">13_orchestrator_workers.py</span>
+      </a>
+    </span>
+  </div>
+  <h1>The foreman</h1>
+  <p class="lede">Four AI workers fix bugs together: a researcher, a coder, a tester and a reviewer.
+  Something has to decide who works next, and in most frameworks that is another large model
+  re-reading the whole conversation on every turn. Here Jev makes that choice in a quarter
+  of a second. It also checks whether the last piece of work was any good, and notices when the
+  team is going round in circles.</p>
+
+  <div class="panel">
+    <div class="controls">
+      <button id="play" class="primary">▶  Play</button>
+      <button id="step">Step</button>
+      <button id="reset">Reset</button>
+      <div class="spacer"></div>
+      <label class="ctl">Confidence floor <input id="floor" type="range" min="0.3" max="0.9" step="0.05" value="0.6"><span class="val" id="floor-v">0.60</span></label>
+      <label class="ctl">Step budget <input id="max" type="range" min="3" max="12" step="1" value="10"><span class="val" id="max-v">10</span></label>
+      <label class="ctl">Speed <input id="speed" type="range" min="0.5" max="4" step="0.5" value="1"></label>
+    </div>
+    <div class="stage-scroll"><svg id="stage" viewBox="0 0 960 410" role="img"
+         aria-label="A Jev supervisor in the middle sends each step to one of four LLM workers, to finish, or to a person."></svg></div>
+    <div class="legend">
+      <span><i style="background:var(--jev)"></i>Jev: one call per step</span>
+      <span><i style="background:var(--llm)"></i>LLM worker doing the work</span>
+      <span><i style="background:var(--code)"></i>Done</span>
+      <span><i style="background:var(--human)"></i>A person</span>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="panel">
+      <h2>The supervisor's read <span class="sub" id="step-title"></span></h2>
+      <div id="probs"><p class="note" style="margin:0">Press <b>Play</b>. Each step is one Jev call returning four answers at once.</p></div>
+      <div id="worker-out" style="font-size:13px;margin-top:12px"></div>
+    </div>
+    <div class="panel">
+      <h2>So far</h2>
+      <div class="stats">
+        <div class="stat" data-stat="decisions"><div class="k">Decisions</div><div class="v">0</div><div class="n">supervisor calls</div></div>
+        <div class="stat" data-stat="jev"><div class="k">Jev time</div><div class="v">0.0s</div><div class="n">all decisions</div></div>
+        <div class="stat" data-stat="llm"><div class="k">LLM supervisor</div><div class="v">0s</div><div class="n">same decisions</div></div>
+        <div class="stat" data-stat="done"><div class="k">Done</div><div class="v">0</div><div class="n">no person</div></div>
+        <div class="stat" data-stat="person"><div class="k">To a person</div><div class="v">0</div><div class="n">with a reason</div></div>
+        <div class="stat" data-stat="cost"><div class="k">Supervisor cost</div><div class="v">$0.000</div><div class="n">vs $0.00 LLM</div></div>
+      </div>
+      <p class="note" id="verdict">Raise the <b>confidence floor</b> to 0.7 and the first bug goes to a
+      person even though it was going fine. Lower the <b>step budget</b> and the flaky test is stopped by
+      the budget before Jev spots the loop. Changes apply from the next decision.</p>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="panel">
+      <h2>The code <span class="sub">· lines this step ran are highlighted</span></h2>
+      <pre class="code" id="code"></pre>
+    </div>
+    <div class="panel">
+      <h2>Tasks</h2>
+      <div class="table-scroll"><table class="rows" id="table">
+        <thead><tr><th>Task</th><th>Path</th><th>Outcome</th></tr></thead>
+        <tbody></tbody>
+      </table></div>
+    </div>
+  </div>
+
+  <p class="note">The numbers are illustrative, not measured: 0.25s and about $0.0001 per Jev call; an LLM
+  supervisor at about 4s and $0.01 per call, more as the transcript grows. ←
+  <a href="12-parallel-fanout.html">12 · Four specialists, one verdict</a> · Next:
+  <a href="14-agent-handoff.html">14 · Passing the customer on</a> →</p>
+</div>
+
+<script type="text/plain" id="py">
+FLOOR = {FLOOR}                # confidence floor, slider
+MAX_STEPS = {MAX}              # slider
+
+for step in range(MAX_STEPS):
+    a = jev.system_one(state=compact(task, history),  #@jev
+                       questions=SUPERVISOR).answers    #@jev
+    nxt = a["next_agent"]
+    if a["stuck"].noul > 0.70:                        #@stuck
+        return to_person("going round in circles")    #@stuck
+    if nxt.confidence < FLOOR or nxt.choice == "human":  #@unsure
+        return to_person("supervisor is unsure")      #@unsure
+    if a["needs_external_action"].noul > 0.30:        #@external
+        return to_person("needs approval")            #@external
+    if nxt.choice == "finish":                        #@finish
+        return done(history)                          #@finish
+    output = WORKERS[nxt.choice].run(task, history)   #@work
+    history.append((nxt.choice, output))   # LLM did it  #@work
+return to_person("step budget used up")               #@budget
+</script>
+
+<script src="assets/d3-mini.js"></script>
+<script type="module">
+import { $, Ticker, wireControls, setStat, dur, renderCode, markCode, travel } from "./assets/sim.js";
+
+const OPTS = ["researcher", "coder", "tester", "reviewer", "finish", "human"];
+const NODE = {
+  researcher: ["Researcher", "LLM · finds the cause", "--llm"], coder: ["Coder", "LLM · writes the patch", "--llm"],
+  tester: ["Tester", "LLM · runs the tests", "--llm"], reviewer: ["Reviewer", "LLM · checks the patch", "--llm"],
+  finish: ["Finish", "acceptance met", "--code"], human: ["A person", "with the reason", "--human"],
+};
+// p: Jev's next_agent probabilities (top first), ok: last_output_ok (0–2), stuck, ext: needs_external_action.
+const P = (top, c, rest = {}) => ({ [top]: c, ...rest });
+const TASKS = [
+  { t: "CSV export drops accented names", steps: [
+    { p: P("researcher", .86, { coder: .1 }), ok: 1.0, stuck: .02, ext: .03, out: "export.py opens the file as ASCII with errors='ignore', so rows with accents are skipped." },
+    { p: P("coder", .91, { tester: .05 }), ok: 1.9, stuck: .03, ext: .04, out: "Patch: open as UTF-8; added test_export_keeps_accented_names." },
+    { p: P("tester", .88, { reviewer: .08 }), ok: 1.8, stuck: .04, ext: .03, out: "41 passed, 1 failed: test_export_header (BOM in first column)." },
+    { p: P("coder", .66, { tester: .21, reviewer: .08 }), ok: .9, stuck: .12, ext: .04, out: "Patch: write without a BOM; header test updated." },
+    { p: P("tester", .90, { reviewer: .07 }), ok: 1.8, stuck: .08, ext: .03, out: "42 passed, 0 failed." },
+    { p: P("reviewer", .87, { finish: .1 }), ok: 1.9, stuck: .05, ext: .05, out: "Approved: UTF-8 with newline='' is the csv idiom." },
+    { p: P("finish", .93, { reviewer: .04 }), ok: 1.9, stuck: .03, ext: .06 },
+  ] },
+  { t: "Flaky test_checkout_total", steps: [
+    { p: P("researcher", .80, { coder: .15 }), ok: 1.0, stuck: .03, ext: .02, out: "The test compares money as floats with ==." },
+    { p: P("coder", .89, { tester: .07 }), ok: 1.8, stuck: .05, ext: .02, out: "Patch: pytest.approx on the total." },
+    { p: P("tester", .90, { coder: .06 }), ok: 1.7, stuck: .08, ext: .02, out: "Failed 3 of 100 runs." },
+    { p: P("coder", .77, { researcher: .15 }), ok: .7, stuck: .38, ext: .02, out: "Patch: widen the tolerance." },
+    { p: P("tester", .86, { coder: .1 }), ok: .8, stuck: .55, ext: .02, out: "Failed 2 of 100 runs." },
+    { p: P("coder", .72, { researcher: .2 }), ok: .6, stuck: .81, ext: .02, out: "Patch: widen the tolerance again." },
+    { p: P("tester", .84, { coder: .1 }), ok: .5, stuck: .88, ext: .02, out: "Failed 3 of 100 runs." },
+    { p: P("coder", .70, { researcher: .22 }), ok: .5, stuck: .9, ext: .02, out: "Patch: widen the tolerance further." },
+    { p: P("tester", .82, { coder: .12 }), ok: .5, stuck: .91, ext: .02, out: "Failed 2 of 100 runs." },
+    { p: P("coder", .68, { researcher: .25 }), ok: .5, stuck: .92, ext: .02, out: "Patch: retry the test on failure." },
+    { p: P("tester", .8, { coder: .12 }), ok: .5, stuck: .93, ext: .02, out: "Failed 1 of 100 runs." },
+    { p: P("coder", .66, { researcher: .25 }), ok: .5, stuck: .93, ext: .02, out: "Patch: retry twice." },
+  ] },
+  { t: "Customer double-charged by a retry bug", steps: [
+    { p: P("researcher", .84, { coder: .1 }), ok: 1.0, stuck: .02, ext: .08, out: "Payment retries send no idempotency key, so a timeout charges twice." },
+    { p: P("coder", .88, { tester: .08 }), ok: 1.9, stuck: .03, ext: .1, out: "Patch: pass an idempotency key on every retry." },
+    { p: P("tester", .90, { reviewer: .06 }), ok: 1.8, stuck: .04, ext: .12, out: "57 passed, 0 failed." },
+    { p: P("reviewer", .71, { human: .2 }), ok: 1.9, stuck: .04, ext: .82, out: "" },
+  ] },
+  { t: "Typo on the pricing page", steps: [
+    { p: P("coder", .93, { researcher: .04 }), ok: 1.0, stuck: .01, ext: .04, out: "Patch: “per anum” → “per annum”." },
+    { p: P("reviewer", .90, { finish: .07 }), ok: 1.9, stuck: .02, ext: .05, out: "Approved." },
+    { p: P("finish", .95, { reviewer: .03 }), ok: 1.9, stuck: .02, ext: .05 },
+  ] },
+];
+
+function decide(s, k, floor, max) {
+  const top = Object.entries(s.p).sort((a, b) => b[1] - a[1])[0];
+  if (k >= max) return { to: "human", why: `step budget of ${max} used up`, tag: "budget" };
+  if (s.stuck > .7) return { to: "human", why: "going round in circles", tag: "stuck" };
+  if (top[1] < floor || top[0] === "human") return { to: "human", why: `supervisor unsure (${top[1].toFixed(2)} < ${floor.toFixed(2)})`, tag: "unsure" };
+  if (s.ext > .3) return { to: "human", why: "next step refunds a customer: needs approval", tag: "external" };
+  if (top[0] === "finish") return { to: "finish", why: "acceptance met", tag: "finish" };
+  return { to: top[0], why: "", tag: "work" };
+}
+
+// ------------------------------------------------------------------ drawing
+const svg = d3.select("#stage");
+const SX = 300, SY = 205, WX = 560, WY = (k) => 40 + k * 66;
+svg.append("defs").append("marker").attr("id", "a13").attr("viewBox", "0 0 8 8").attr("refX", 7)
+  .attr("refY", 4).attr("markerWidth", 6).attr("markerHeight", 6).attr("orient", "auto")
+  .append("path").attr("d", "M0,0 L8,4 L0,8 Z").attr("fill", "var(--muted)");
+const text = (x, y, s, o = {}) => svg.append("text").attr("x", x).attr("y", y).attr("text-anchor", o.a || "middle")
+  .attr("font-size", o.size || 12).attr("font-weight", o.w || 400).attr("fill", o.fill || "var(--ink)")
+  .attr("font-family", o.mono ? "var(--mono)" : null).text(s);
+
+svg.append("rect").attr("x", 16).attr("y", SY - 60).attr("width", 170).attr("height", 120).attr("rx", 10)
+  .attr("fill", "var(--bg)").attr("stroke", "var(--line)");
+text(101, SY - 34, "Task", { w: 600, size: 13 });
+const taskT = text(101, SY - 12, "—", { size: 11, fill: "var(--muted)" });
+text(101, SY + 16, "steps used", { size: 10.5, fill: "var(--muted)" });
+svg.append("rect").attr("x", 32).attr("y", SY + 26).attr("width", 138).attr("height", 8).attr("rx", 4).attr("fill", "var(--line-soft)");
+const budget = svg.append("rect").attr("x", 32).attr("y", SY + 26).attr("width", 0).attr("height", 8).attr("rx", 4).attr("fill", "var(--jev)");
+const budgetT = text(101, SY + 52, "0 / 10", { size: 11, mono: true, fill: "var(--muted)" });
+svg.append("path").attr("d", `M186,${SY} L${SX - 50},${SY}`).attr("stroke", "var(--line)").attr("stroke-width", 1.8).attr("marker-end", "url(#a13)");
+
+svg.append("rect").attr("x", SX - 36).attr("y", SY - 36).attr("width", 72).attr("height", 72).attr("rx", 10)
+  .attr("transform", `rotate(45 ${SX} ${SY})`).attr("fill", "var(--jev)");
+text(SX, SY - 6, "Jev", { size: 15, w: 700, fill: "#fff" });
+text(SX, SY + 12, "who's next?", { size: 10.5, fill: "#fff" });
+const pulse = svg.append("rect").attr("x", SX - 36).attr("y", SY - 36).attr("width", 72).attr("height", 72).attr("rx", 10)
+  .attr("transform", `rotate(45 ${SX} ${SY})`).attr("fill", "none").attr("stroke", "var(--jev)").attr("stroke-width", 3).attr("opacity", 0);
+
+const nodes = {};
+OPTS.forEach((o, k) => {
+  const y = WY(k), [label, sub, colour] = NODE[o];
+  svg.append("path").attr("id", `go-${o}`).attr("d", `M${SX + 50},${SY} C${SX + 140},${SY} ${WX - 110},${y} ${WX - 4},${y}`)
+    .attr("fill", "none").attr("stroke", "var(--line)").attr("stroke-width", 1.6).attr("marker-end", "url(#a13)");
+  svg.append("path").attr("id", `back-${o}`).attr("d", `M${WX},${y + 8} C${WX - 120},${y + 8} ${SX + 150},${SY + 20} ${SX + 48},${SY + 14}`)
+    .attr("fill", "none").attr("stroke", "none");
+  const frame = svg.append("rect").attr("x", WX).attr("y", y - 25).attr("width", 250).attr("height", 50).attr("rx", 9)
+    .attr("fill", "var(--panel)").attr("stroke", `var(${colour})`).attr("stroke-width", 1.5);
+  text(WX + 14, y - 3, label, { a: "start", size: 12.5, w: 620 });
+  text(WX + 14, y + 13, sub, { a: "start", size: 10.5, fill: "var(--muted)" });
+  const n = text(WX + 236, y + 6, "0", { a: "end", size: 16, w: 650, mono: true, fill: `var(${colour})` });
+  nodes[o] = { frame, n, count: 0 };
+});
+
+// ------------------------------------------------------------------ state
+const SRC = $("#py").textContent, code = $("#code");
+const floor = () => Number($("#floor").value), max = () => Number($("#max").value);
+let t = 0, k = 0, decisions = 0, llmCost = 0, llmSecs = 0, outcomes = [], path = [], lastTags = [];
+
+function bars(s) {
+  // Listed options are exactly what the decision used; the remainder is spread over the rest.
+  const listed = OPTS.filter((o) => o in s.p);
+  const rest = Math.max(0, 1 - listed.reduce((a, o) => a + s.p[o], 0)) / (OPTS.length - listed.length);
+  const entries = OPTS.map((o) => [o, o in s.p ? s.p[o] : rest]);
+  return `<div style="font-size:12px;color:var(--muted);margin-bottom:6px">next_agent <span class="mono">(Choice)</span></div>` +
+    entries.map(([o, v]) => `
+    <div style="display:grid;grid-template-columns:78px 1fr 40px;gap:8px;align-items:center;margin:4px 0;font-size:12px">
+      <span style="color:var(--muted)">${o}</span>
+      <div class="bar"><span style="width:${v * 100}%;background:var(${NODE[o][2]})"></span></div>
+      <span class="tick" style="text-align:right">${v.toFixed(2)}</span>
+    </div>`).join("") +
+    `<div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;font-size:12px">
+      <span>last_output_ok <b class="tick">${s.ok.toFixed(2)}</b></span>
+      <span style="color:${s.stuck > .7 ? "var(--danger)" : "inherit"}">stuck <b class="tick">${s.stuck.toFixed(2)}</b></span>
+      <span style="color:${s.ext > .3 ? "var(--human)" : "inherit"}">needs_external_action <b class="tick">${s.ext.toFixed(2)}</b></span></div>`;
+}
+
+function statsPaint() {
+  setStat("decisions", decisions);
+  setStat("jev", (decisions * .25).toFixed(1) + "s");
+  setStat("llm", Math.round(llmSecs) + "s");
+  setStat("done", outcomes.filter((o) => o.to === "finish").length);
+  setStat("person", outcomes.filter((o) => o.to === "human").length);
+  setStat("cost", "$" + (decisions * .0001).toFixed(4), `vs $${llmCost.toFixed(2)} LLM`);
+  $("#table tbody").innerHTML = TASKS.map((T, j) => {
+    const o = outcomes[j], p = j === t ? path : o ? o.path : null;
+    if (!p) return `<tr><td>${T.t}</td><td>—</td><td><span class="chip idle">waiting</span></td></tr>`;
+    return `<tr><td>${T.t}</td><td class="tick" style="font-size:11px">${p.map((x) => x.slice(0, 3)).join("→") || "…"}</td>
+      <td>${o ? `<span class="chip ${o.to === "finish" ? "ok" : "human"}">${o.to === "finish" ? "done" : "a person"}</span><div class="why" style="font-size:11px;color:var(--muted)">${o.why}</div>` : `<span class="chip jev">working</span>`}</td></tr>`;
+  }).join("");
+}
+
+function tick() {
+  if (t >= TASKS.length) { ticker.pause(); paint(); return; }
+  const T = TASKS[t], s = T.steps[Math.min(k, T.steps.length - 1)];
+  const d = decide(s, k, floor(), max());
+  decisions++; llmSecs += 4 + k * .4; llmCost += .01 + k * .002;
+  taskT.text(T.t.length > 26 ? T.t.slice(0, 25) + "…" : T.t);
+  $("#step-title").textContent = `· ${T.t} · step ${k + 1}`;
+  $("#probs").innerHTML = bars(s);
+  pulse.attr("opacity", .9).transition().duration(dur(420)).attr("opacity", 0);
+  travel(svg, document.getElementById(`go-${d.to}`), `var(${NODE[d.to][2]})`, { ms: 520, delay: 200 });
+  nodes[d.to].count++; nodes[d.to].n.text(nodes[d.to].count);
+  lastTags = ["jev", d.tag]; markCode(code, ...lastTags);
+
+  if (d.tag === "work") {
+    path.push(d.to); k++;
+    travel(svg, document.getElementById(`back-${d.to}`), "var(--llm)", { ms: 520, delay: 900, r: 5 });
+    $("#worker-out").innerHTML = `<span class="chip retry">${d.to}</span> ${s.out}`;
+  } else {
+    path.push(d.to === "finish" ? "done" : "person");
+    outcomes[t] = { to: d.to, why: d.why, path: [...path] };
+    $("#worker-out").innerHTML = `<span class="chip ${d.to === "finish" ? "ok" : "human"}">${d.to === "finish" ? "done" : "a person"}</span> ${d.why}`;
+    t++; k = 0; path = [];
+  }
+  budget.attr("width", 138 * Math.min(k / max(), 1)); budgetT.text(`${k} / ${max()}`);
+  statsPaint();
+  if (t >= TASKS.length) {
+    const p = outcomes.filter((o) => o.to === "human");
+    $("#verdict").innerHTML = `<b>${decisions}</b> supervisor decisions took about <b>${(decisions * .25).toFixed(1)}s</b> with Jev, against about <b>${Math.round(llmSecs)}s</b> for an LLM supervisor.
+      ${p.length} task${p.length === 1 ? "" : "s"} went to a person, each with a reason a person can act on: ${p.map((o) => `<i>${o.why}</i>`).join("; ")}.`;
+  }
+}
+
+function refreshCode() {
+  $("#floor-v").textContent = floor().toFixed(2); $("#max-v").textContent = max();
+  renderCode(code, SRC.replace("{FLOOR}", floor().toFixed(2)).replace("{MAX}", max()));
+  markCode(code, ...lastTags);
+  budgetT.text(`${k} / ${max()}`); budget.attr("width", 138 * Math.min(k / max(), 1));
+}
+
+const ticker = new Ticker(tick, 1500);
+const paint = wireControls({
+  ticker, playBtn: $("#play"), stepBtn: $("#step"), resetBtn: $("#reset"), speedInput: $("#speed"),
+  onReset() {
+    t = k = decisions = llmCost = llmSecs = 0; outcomes = []; path = []; lastTags = [];
+    OPTS.forEach((o) => { nodes[o].count = 0; nodes[o].n.text("0"); });
+    taskT.text("—"); $("#step-title").textContent = ""; $("#worker-out").innerHTML = "";
+    $("#probs").innerHTML = `<p class="note" style="margin:0">Press <b>Play</b>. Each step is one Jev call returning four answers at once.</p>`;
+    refreshCode(); statsPaint();
+  },
+});
+$("#floor").addEventListener("input", refreshCode);
+$("#max").addEventListener("input", refreshCode);
+refreshCode(); statsPaint();
+</script>
+</body>
+</html>
