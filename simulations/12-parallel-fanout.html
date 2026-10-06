@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Parallel Agent Fan-Out</title>
+<meta name="description" content="Four specialist AI agents could review every new supplier. Jev picks which ones this supplier needs, they run at the same time, and a second Jev call merges their findings into one verdict.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%278%27 fill=%27%23d63c9e%27/%3E%3Cpath d=%27M20 8v11a5 5 0 0 1-9 3%27 stroke=%27white%27 stroke-width=%273%27 fill=%27none%27 stroke-linecap=%27round%27/%3E%3C/svg%3E">
+<link rel="stylesheet" href="assets/sim.css">
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="agentic.html">← agentic systems</a>
+  <div class="top"><span class="eyebrow">Agentic · Parallel · Cookbook 12</span>
+    <span class="top-links">
+      <a class="repo-link" href="https://github.com/exponen-agi/jev-playground/blob/main/cookbooks/12_parallel_due_diligence.py"
+         aria-label="View the Python source for cookbook 12 on GitHub">
+        <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M4.72 3.22a.75.75 0 0 1 1.06 1.06L2.06 8l3.72 3.72a.75.75 0 1 1-1.06 1.06L.47 8.53a.75.75 0 0 1 0-1.06l4.25-4.25Zm6.56 0a.75.75 0 1 0-1.06 1.06L13.94 8l-3.72 3.72a.75.75 0 1 0 1.06 1.06l4.25-4.25a.75.75 0 0 0 0-1.06l-4.25-4.25Z"></path></svg><span class="label">The Python</span> <span class="mono">12_parallel_due_diligence.py</span>
+      </a>
+    </span>
+  </div>
+  <h1>Four specialists, one verdict</h1>
+  <p class="lede">A new supplier wants a contract. Four specialist AI agents could review it:
+  security, privacy, legal and finance. Running all four on a stationery supplier is a waste of
+  money, and skipping the wrong one on a patient-records vendor is how a breach starts. Jev decides
+  which specialists this supplier needs, the chosen ones work at the same time, and a second
+  Jev call turns what they wrote into one decision.</p>
+
+  <div class="panel">
+    <div class="controls">
+      <button id="play" class="primary">▶  Play</button>
+      <button id="step">Step</button>
+      <button id="reset">Reset</button>
+      <div class="seg" role="group" aria-label="Who decides which specialists run">
+        <button id="m-jev" aria-pressed="true">Jev picks</button>
+        <button id="m-all" aria-pressed="false">Run all four</button>
+      </div>
+      <div class="spacer"></div>
+      <label class="ctl">Selection bar <input id="bar" type="range" min="0.2" max="0.8" step="0.05" value="0.4"><span class="val" id="bar-v">0.40</span></label>
+      <label class="ctl">Speed <input id="speed" type="range" min="0.5" max="4" step="0.5" value="1"></label>
+    </div>
+    <div class="stage-scroll"><svg id="stage" viewBox="0 0 960 400" role="img"
+         aria-label="A supplier packet goes to Jev, which selects up to four specialist agents. They run in parallel, and a second Jev call merges their findings into sign, sign with conditions, do not sign, or a person."></svg></div>
+    <div class="legend">
+      <span><i style="background:var(--jev)"></i>Jev: plan, then merge</span>
+      <span><i style="background:var(--llm)"></i>Specialist LLM agent (runs in parallel)</span>
+      <span><i style="background:var(--code)"></i>Rule in code: contract value</span>
+      <span><i style="background:var(--danger)"></i>An issue nobody looked for</span>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="panel">
+      <h2>This supplier <span class="sub" id="v-title"></span></h2>
+      <div id="packet" style="font-size:13.5px;background:var(--bg);border:1px solid var(--line);
+           border-radius:9px;padding:12px;min-height:48px">Press <b>Play</b>.</div>
+      <ul class="log" id="log" style="margin-top:10px"></ul>
+    </div>
+    <div class="panel">
+      <h2>So far</h2>
+      <div class="stats">
+        <div class="stat" data-stat="runs"><div class="k">Specialists run</div><div class="v">0</div><div class="n">of 0 possible</div></div>
+        <div class="stat" data-stat="cost"><div class="k">Specialist cost</div><div class="v">$0.00</div><div class="n">frontier calls</div></div>
+        <div class="stat" data-stat="wall"><div class="k">Wall time</div><div class="v">0s</div><div class="n">in parallel</div></div>
+        <div class="stat" data-stat="seq"><div class="k">One after another</div><div class="v">0s</div><div class="n">same specialists</div></div>
+        <div class="stat" data-stat="missed"><div class="k">Issues missed</div><div class="v">0</div><div class="n">specialist not run</div></div>
+        <div class="stat" data-stat="wrong"><div class="k">Wrong verdicts</div><div class="v">0</div><div class="n">vs running all four</div></div>
+      </div>
+      <p class="note" id="verdict">Switch between <b>Jev picks</b> and <b>Run all four</b> and compare the
+      cost. Then raise the <b>selection bar</b> and see when skipping a specialist starts
+      missing real issues.</p>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="panel">
+      <h2>The code <span class="sub">· lines this supplier ran are highlighted</span></h2>
+      <pre class="code" id="code"></pre>
+    </div>
+    <div class="panel">
+      <h2>Every supplier so far <span class="sub">· at the current settings</span></h2>
+      <div class="table-scroll"><table class="rows" id="table">
+        <thead><tr><th>Supplier</th><th>Ran</th><th>Verdict</th></tr></thead>
+        <tbody></tbody>
+      </table></div>
+    </div>
+  </div>
+
+  <p class="note">The numbers are illustrative, not measured: about $0.09 and 15–35s per specialist,
+  0.25s per Jev call. ← <a href="11-sequential-pipeline.html">11 · Three desks, one claim</a> ·
+  Next: <a href="13-orchestrator-workers.html">13 · The foreman</a> →</p>
+</div>
+
+<script type="text/plain" id="py">
+SELECT_BAR = {BAR}      # the slider
+
+p = jev.system_one(state=packet, questions=PLAN).answers  #@jev
+chosen = {s for s in ("security", "privacy", "legal")     #@pick
+          if p[s].noul > SELECT_BAR}                      #@pick
+if p["finance"].score > 1.0: chosen.add("finance")        #@pick
+if value >= 50_000: chosen.add("legal")    # policy: code   #@value
+if value >= 100_000: chosen.add("finance")                #@value
+if RUN_ALL: chosen = set(SPECIALISTS)                     #@all
+
+findings = run_parallel(chosen, packet)  # LLMs, at once   #@run
+a = jev.system_one(state=findings,                        #@merge
+                   questions=merge_q(chosen)).answers     #@merge
+for s in chosen:
+    sev = a[f"{s}_severity"].score
+    if sev > 0.6 and a[f"{s}_evidence"].noul < 0.5:       #@person
+        return PERSON        # an alarm with no evidence  #@person
+    if sev > 1.5: return DO_NOT_SIGN                      #@block
+    if sev > 0.6: conditions.append(s)                    #@cond
+return CONDITIONS if conditions else SIGN                 #@sign
+</script>
+
+<script src="assets/d3-mini.js"></script>
+<script type="module">
+import { $, Ticker, wireControls, setStat, dur, renderCode, markCode, travel } from "./assets/sim.js";
+
+const SPEC = ["security", "privacy", "legal", "finance"];
+const SECS = { security: 28, privacy: 22, legal: 35, finance: 16 };
+const PRICE = .09;
+// plan: Jev's answers on the packet. f: what each specialist WOULD find if run
+// (sev 0–2 Score, ev = evidence Noul, n = note). Ground truth for "missed".
+const V = [
+  { t: "PaperCo · stationery", value: 4800, packet: "Office paper delivered monthly to reception. No system access. Standard terms. Trading since 1987.",
+    plan: { security: .05, privacy: .03, legal: .08, finance: .2 },
+    f: { security: [0, .9, "no access to anything"], privacy: [0, .9, "no personal data"], legal: [.1, .9, "standard terms"], finance: [0, .9, "long-established"] } },
+  { t: "Clinic CRM · patient booking", value: 120000, packet: "Hosts our patient appointment records. Region unspecified. 3-year auto-renewal; liability capped at one month's fees. Seed-funded, 2023.",
+    plan: { security: .88, privacy: .97, legal: .9, finance: 1.6 },
+    f: { security: [1.0, .85, "needs a SOC 2 report"], privacy: [1.8, .92, "patient data, no stated region: blocker"], legal: [1.2, .9, "renewal and liability cap to negotiate"], finance: [1.0, .8, "ask for an exit clause"] } },
+  { t: "FastFix · on-site IT repair", value: 18000, packet: "Technicians repair laptops on site and may take them off-site for up to five days. Standard terms.",
+    plan: { security: .62, privacy: .44, legal: .1, finance: .3 },
+    f: { security: [1.1, .9, "require disk encryption before hand-over"], privacy: [.8, .8, "laptops hold staff personal data"], legal: [0, .9, "standard terms"], finance: [0, .9, "no concerns"] } },
+  { t: "Brightside · marketing agency", value: 65000, packet: "Runs our email campaigns from our customer list. Contract assigns IP in all created assets to the agency.",
+    plan: { security: .3, privacy: .72, legal: .36, finance: .5 },
+    f: { security: [.3, .8, "shared login to the email tool"], privacy: [1.1, .88, "customer list needs a processing agreement"], legal: [1.7, .93, "agency would own our brand assets: blocker"], finance: [0, .9, "no concerns"] } },
+  { t: "Sprout · office catering", value: 9000, packet: "Weekly lunches. We send staff dietary and allergy details so they can label dishes.",
+    plan: { security: .08, privacy: .47, legal: .12, finance: .4 },
+    f: { security: [0, .9, "no system access"], privacy: [1.2, .9, "allergy details are health data: limit and protect"], legal: [0, .9, "standard terms"], finance: [.2, .8, "small but profitable"] } },
+  { t: "Metricly · analytics startup", value: 30000, packet: "Embeds a script on our website to collect usage analytics. Founded last year.",
+    plan: { security: .81, privacy: .58, legal: .45, finance: 1.4 },
+    f: { security: [1.0, .3, "“the script might be insecure”, no specifics"], privacy: [.9, .85, "needs a cookie consent setup"], legal: [.4, .8, "minor edits"], finance: [.9, .8, "runway unclear"] } },
+  { t: "ShineRight · office cleaning", value: 12000, packet: "Evening cleaning crew. Will hold building keys and the alarm code.",
+    plan: { security: .43, privacy: .06, legal: .1, finance: .3 },
+    f: { security: [.9, .9, "keys and alarm code: need a vetting and handover log"], privacy: [0, .9, "no data"], legal: [0, .9, "standard terms"], finance: [0, .9, "no concerns"] } },
+];
+
+const VERDICT = { sign: ["Sign", "--code"], cond: ["Sign with conditions", "--llm"], block: ["Do not sign", "--danger"], person: ["A person", "--human"] };
+
+function choose(v, bar, all) {
+  const tags = new Set(["jev", "run", "merge"]);
+  if (all) { tags.add("all"); return { chosen: [...SPEC], why: {}, tags }; }
+  const chosen = new Set(), why = {};
+  ["security", "privacy", "legal"].forEach((s) => { if (v.plan[s] > bar) { chosen.add(s); why[s] = "jev"; tags.add("pick"); } });
+  if (v.plan.finance > 1.0) { chosen.add("finance"); why.finance = "jev"; tags.add("pick"); }
+  if (v.value >= 50000 && !chosen.has("legal")) { chosen.add("legal"); why.legal = "code"; tags.add("value"); }
+  if (v.value >= 100000 && !chosen.has("finance")) { chosen.add("finance"); why.finance = "code"; tags.add("value"); }
+  return { chosen: SPEC.filter((s) => chosen.has(s)), why, tags };
+}
+
+function merge(v, chosen) {
+  const cond = [];
+  for (const s of chosen) {
+    const [sev, ev] = v.f[s];
+    if (sev > .6 && ev < .5) return { k: "person", why: `${s} raised an alarm without evidence`, tag: "person" };
+    if (sev > 1.5) return { k: "block", why: `${s}: ${v.f[s][2]}`, tag: "block" };
+    if (sev > .6) cond.push(s);
+  }
+  return cond.length ? { k: "cond", why: "conditions from " + cond.join(", "), tag: "cond" } : { k: "sign", why: "nothing material found", tag: "sign" };
+}
+
+function run(v, bar, all) {
+  const c = choose(v, bar, all);
+  const m = merge(v, c.chosen);
+  const truth = merge(v, SPEC);
+  const missed = SPEC.filter((s) => !c.chosen.includes(s) && v.f[s][0] > .6);
+  c.tags.add(m.tag);
+  const wall = c.chosen.length ? Math.max(...c.chosen.map((s) => SECS[s])) + .5 : .25;
+  const seq = c.chosen.reduce((t, s) => t + SECS[s], 0) + .5;
+  return { ...c, m, truth, missed, wrong: m.k !== truth.k, wall, seq };
+}
+
+// ------------------------------------------------------------------ drawing
+const svg = d3.select("#stage");
+const CY = 200, PX = 205, MX = 700, LY = (k) => 62 + k * 92, OY = (k) => 62 + k * 92;
+svg.append("defs").append("marker").attr("id", "a12").attr("viewBox", "0 0 8 8").attr("refX", 7)
+  .attr("refY", 4).attr("markerWidth", 6).attr("markerHeight", 6).attr("orient", "auto")
+  .append("path").attr("d", "M0,0 L8,4 L0,8 Z").attr("fill", "var(--muted)");
+const link = (id, d) => svg.append("path").attr("id", id).attr("d", d).attr("fill", "none")
+  .attr("stroke", "var(--line)").attr("stroke-width", 1.8).attr("marker-end", "url(#a12)");
+const text = (x, y, s, o = {}) => svg.append("text").attr("x", x).attr("y", y).attr("text-anchor", o.a || "middle")
+  .attr("font-size", o.size || 12).attr("font-weight", o.w || 400).attr("fill", o.fill || "var(--ink)")
+  .attr("font-family", o.mono ? "var(--mono)" : null).text(s);
+const diamond = (x, label) => {
+  svg.append("rect").attr("x", x - 22).attr("y", CY - 22).attr("width", 44).attr("height", 44).attr("rx", 7)
+    .attr("transform", `rotate(45 ${x} ${CY})`).attr("fill", "var(--jev)");
+  text(x, CY - 2, "Jev", { size: 12, w: 700, fill: "#fff" });
+  text(x, CY + 12, label, { size: 9.5, fill: "#fff" });
+  return svg.append("rect").attr("x", x - 22).attr("y", CY - 22).attr("width", 44).attr("height", 44).attr("rx", 7)
+    .attr("transform", `rotate(45 ${x} ${CY})`).attr("fill", "none").attr("stroke", "var(--jev)").attr("stroke-width", 3).attr("opacity", 0);
+};
+
+svg.append("rect").attr("x", 16).attr("y", CY - 36).attr("width", 120).attr("height", 72).attr("rx", 10)
+  .attr("fill", "var(--bg)").attr("stroke", "var(--line)");
+text(76, CY - 10, "Suppliers", { w: 600, size: 13 });
+const inN = text(76, CY + 16, V.length, { size: 19, w: 650, mono: true, fill: "var(--muted)" });
+link("p-in", `M136,${CY} L${PX - 34},${CY}`);
+const pulsePlan = diamond(PX, "plan");
+const pulseMerge = diamond(MX, "merge");
+
+const lanes = SPEC.map((s, k) => {
+  const y = LY(k);
+  link(`p-out-${s}`, `M${PX + 32},${CY} C${PX + 80},${CY} ${300 - 50},${y} ${300 - 4},${y}`);
+  const g = svg.append("g");
+  const frame = g.append("rect").attr("x", 300).attr("y", y - 28).attr("width", 300).attr("height", 56).attr("rx", 10)
+    .attr("fill", "var(--panel)").attr("stroke", "var(--llm)").attr("stroke-width", 1.5);
+  g.append("text").attr("x", 314).attr("y", y - 6).attr("font-size", 12.5).attr("font-weight", 620).attr("fill", "var(--ink)")
+    .text(s[0].toUpperCase() + s.slice(1) + " agent");
+  const tag = g.append("text").attr("x", 586).attr("y", y - 6).attr("text-anchor", "end").attr("font-size", 10.5)
+    .attr("font-family", "var(--mono)").attr("fill", "var(--muted)").text("");
+  g.append("rect").attr("x", 314).attr("y", y + 6).attr("width", 272).attr("height", 7).attr("rx", 3.5).attr("fill", "var(--line-soft)");
+  const fill = g.append("rect").attr("x", 314).attr("y", y + 6).attr("width", 0).attr("height", 7).attr("rx", 3.5).attr("fill", "var(--llm)");
+  link(`p-in-${s}`, `M600,${y} C${MX - 70},${y} ${MX - 70},${CY} ${MX - 34},${CY}`);
+  return { g, frame, tag, fill };
+});
+
+const outs = Object.entries(VERDICT).map(([k, [label, colour]], j) => {
+  const y = OY(j);
+  link(`p-v-${k}`, `M${MX + 32},${CY} C${MX + 70},${CY} ${780 - 40},${y} ${780 - 4},${y}`);
+  svg.append("rect").attr("x", 780).attr("y", y - 24).attr("width", 164).attr("height", 48).attr("rx", 9)
+    .attr("fill", "var(--panel)").attr("stroke", `var(${colour})`).attr("stroke-width", 1.5);
+  text(794, y + 4, label, { a: "start", size: 12, w: 620 });
+  return text(930, y + 6, "0", { a: "end", size: 16, w: 650, mono: true, fill: `var(${colour})` });
+});
+
+// ------------------------------------------------------------------ state
+const SRC = $("#py").textContent, code = $("#code");
+const bar = () => Number($("#bar").value);
+let all = false, i = 0, last = null;
+
+function animate(r) {
+  const el = (id) => document.getElementById(id);
+  travel(svg, el("p-in"), "var(--muted)", { ms: 380 });
+  pulsePlan.transition().delay(dur(380)).duration(0).attr("opacity", .9).transition().duration(dur(380)).attr("opacity", 0);
+  let longest = 0;
+  SPEC.forEach((s, k) => {
+    const L = lanes[k], on = r.chosen.includes(s), missed = r.missed.includes(s);
+    L.g.transition().duration(dur(250)).attr("opacity", on ? 1 : .35);
+    L.frame.attr("stroke", missed ? "var(--danger)" : "var(--llm)");
+    L.tag.text(on ? (r.why[s] === "code" ? "contract value rule" : r.why[s] === "jev" ? "Jev picked" : "run all") : missed ? "skipped: had an issue" : "skipped")
+      .attr("fill", on ? (r.why[s] === "code" ? "var(--code)" : "var(--muted)") : missed ? "var(--danger)" : "var(--muted)");
+    L.fill.interrupt().attr("width", 0);
+    if (!on) return;
+    const ms = SECS[s] * 40;
+    longest = Math.max(longest, ms);
+    travel(svg, el(`p-out-${s}`), "var(--llm)", { ms: 380, delay: 420 });
+    L.fill.transition().delay(dur(800)).duration(dur(ms)).ease(d3.easeLinear).attr("width", 272);
+    travel(svg, el(`p-in-${s}`), "var(--llm)", { ms: 380, delay: 800 + ms });
+  });
+  const t = 800 + longest + 400;
+  pulseMerge.transition().delay(dur(t)).duration(0).attr("opacity", .9).transition().duration(dur(380)).attr("opacity", 0);
+  travel(svg, el(`p-v-${r.m.k}`), `var(${VERDICT[r.m.k][1]})`, { ms: 420, delay: t });
+}
+
+function describe(v, r) {
+  const rows = SPEC.map((s) => {
+    const [sev, ev, note] = v.f[s];
+    if (!r.chosen.includes(s)) return r.missed.includes(s)
+      ? `<li><span class="chip bad">skipped</span> ${s} <div class="why" style="color:var(--danger)">would have found: ${note}</div></li>`
+      : `<li><span class="chip idle">skipped</span> ${s} · plan ${s === "finance" ? v.plan[s].toFixed(2) + " (Score)" : v.plan[s].toFixed(2)}</li>`;
+    const chip = sev > 1.5 ? "bad" : sev > .6 ? "retry" : "ok";
+    return `<li><span class="chip ${chip}">sev ${sev.toFixed(1)}</span> ${s}${r.why[s] === "code" ? ` <span class="chip ok">value ≥ $${s === "legal" ? "50k" : "100k"}</span>` : ""}
+      <div class="why">${note} · evidence ${ev.toFixed(2)}</div></li>`;
+  });
+  const [label, colour] = VERDICT[r.m.k];
+  rows.push(`<li><b style="color:var(${colour})">${label}</b> · ${r.m.why}${r.wrong ? ` <span class="chip bad">all four would say: ${VERDICT[r.truth.k][0]}</span>` : ""}</li>`);
+  return rows.join("");
+}
+
+function refresh() {
+  $("#bar-v").textContent = bar().toFixed(2);
+  renderCode(code, SRC.replace("{BAR}", bar().toFixed(2)));
+  const done = V.slice(0, i).map((v) => run(v, bar(), all));
+  const runs = done.reduce((t, r) => t + r.chosen.length, 0);
+  setStat("runs", runs, `of ${done.length * 4} possible`);
+  setStat("cost", "$" + (runs * PRICE).toFixed(2));
+  setStat("wall", Math.round(done.reduce((t, r) => t + r.wall, 0)) + "s");
+  setStat("seq", Math.round(done.reduce((t, r) => t + r.seq, 0)) + "s");
+  const missed = done.reduce((t, r) => t + r.missed.length, 0), wrong = done.filter((r) => r.wrong).length;
+  setStat("missed", missed); setStat("wrong", wrong);
+  const counts = { sign: 0, cond: 0, block: 0, person: 0 };
+  done.forEach((r) => counts[r.m.k]++);
+  Object.keys(VERDICT).forEach((k, j) => outs[j].text(counts[k]));
+  $("#table tbody").innerHTML = done.map((r, k) => `<tr><td>${V[k].t}</td>
+    <td class="tick">${r.chosen.length ? r.chosen.map((s) => s.slice(0, 3)).join(" · ") : "—"}${r.missed.length ? ` <span class="chip bad">missed ${r.missed.length}</span>` : ""}</td>
+    <td><span class="chip ${r.m.k === "sign" ? "ok" : r.m.k === "cond" ? "retry" : r.m.k === "block" ? "bad" : "human"}">${VERDICT[r.m.k][0]}</span></td></tr>`).join("");
+  if (last !== null) {
+    const r = run(V[last], bar(), all);
+    $("#log").innerHTML = describe(V[last], r);
+    markCode(code, ...r.tags);
+  }
+  if (i >= V.length) {
+    $("#verdict").innerHTML = all
+      ? `Running all four on every supplier: <b>${runs}</b> specialist calls, <b>$${(runs * PRICE).toFixed(2)}</b>, nothing missed. Switch to <b>Jev picks</b> to see how many of those calls bought nothing.`
+      : missed
+        ? `At a bar of <b>${bar().toFixed(2)}</b>, <b>${missed}</b> real issue${missed > 1 ? "s were" : " was"} never looked for${wrong ? `, and <b>${wrong}</b> verdict${wrong > 1 ? "s" : ""} came out wrong` : ""}. This is why the bar starts low: running a specialist you didn't need costs less than skipping one you did.`
+        : `<b>${runs} of ${done.length * 4}</b> possible specialist calls, nothing missed, and every verdict matches running all four. Note the marketing agency: legal ran because a <b>rule in code</b> says contracts over $50k get legal review, not because Jev noticed the number.`;
+  }
+}
+
+function tick() {
+  if (i >= V.length) { ticker.pause(); paint(); return; }
+  const v = V[i]; last = i; i++;
+  inN.text(V.length - i);
+  $("#v-title").textContent = `· ${v.t} · $${v.value.toLocaleString()}`;
+  $("#packet").textContent = "“" + v.packet + "”";
+  animate(run(v, bar(), all));
+  refresh();
+}
+
+const ticker = new Ticker(tick, 3200);
+const paint = wireControls({
+  ticker, playBtn: $("#play"), stepBtn: $("#step"), resetBtn: $("#reset"), speedInput: $("#speed"),
+  onReset() {
+    i = 0; last = null; inN.text(V.length);
+    lanes.forEach((L) => { L.g.attr("opacity", 1); L.fill.interrupt().attr("width", 0); L.tag.text(""); L.frame.attr("stroke", "var(--llm)"); });
+    $("#packet").innerHTML = "Press <b>Play</b>."; $("#log").innerHTML = ""; $("#v-title").textContent = "";
+    refresh();
+  },
+});
+const setMode = (m) => {
+  all = m; $("#m-all").setAttribute("aria-pressed", m); $("#m-jev").setAttribute("aria-pressed", !m);
+  $("#bar").disabled = m; refresh();
+};
+$("#m-jev").addEventListener("click", () => setMode(false));
+$("#m-all").addEventListener("click", () => setMode(true));
+$("#bar").addEventListener("input", refresh);
+refresh();
+</script>
+</body>
+</html>
