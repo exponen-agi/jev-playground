@@ -4,13 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Jev Simulations: See Cheap, Calibrated AI Decisions Work</title>
-<meta name="description" content="Ten interactive simulations of the Jev pattern: a fast, cheap System One model makes small judgements, your code decides, and an expensive LLM is called only when needed.">
+<meta name="description" content="Sixteen interactive simulations of the Jev pattern, six of them multi-agent architectures: a fast, cheap System One model makes small judgements, your code decides, and an expensive LLM is called only when needed.">
 <meta name="robots" content="index, follow, max-image-preview:large">
 <link rel="canonical" href="https://exponen-agi.github.io/jev-playground/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="jev-playground">
 <meta property="og:title" content="Jev Simulations: See Cheap, Calibrated AI Decisions Work">
-<meta property="og:description" content="Ten interactive simulations of the Jev pattern: a fast, cheap System One model makes small judgements, your code decides, and an expensive LLM is called only when needed.">
+<meta property="og:description" content="Sixteen interactive simulations of the Jev pattern, six of them multi-agent architectures: a fast, cheap System One model makes small judgements, your code decides, and an expensive LLM is called only when needed.">
 <meta property="og:url" content="https://exponen-agi.github.io/jev-playground/">
 <meta property="og:image" content="https://exponen-agi.github.io/jev-playground/assets/og-index.png">
 <meta property="og:image:width" content="1200">
@@ -18,7 +18,7 @@
 <meta property="og:image:alt" content="See Jev work: ten simulations of cheap, calibrated AI decisions">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Jev Simulations: See Cheap, Calibrated AI Decisions Work">
-<meta name="twitter:description" content="Ten interactive simulations of the Jev pattern: a fast, cheap System One model makes small judgements, your code decides, and an expensive LLM is called only when needed.">
+<meta name="twitter:description" content="Sixteen interactive simulations of the Jev pattern, six of them multi-agent architectures: a fast, cheap System One model makes small judgements, your code decides, and an expensive LLM is called only when needed.">
 <meta name="twitter:image" content="https://exponen-agi.github.io/jev-playground/assets/og-index.png">
 <meta name="theme-color" content="#d63c9e">
 <script type="application/ld+json">
@@ -41,7 +41,7 @@
       "@id": "https://exponen-agi.github.io/jev-playground/#page",
       "url": "https://exponen-agi.github.io/jev-playground/",
       "name": "Jev Simulations: See Cheap, Calibrated AI Decisions Work",
-      "description": "Ten interactive simulations of the Jev pattern: a fast, cheap System One model makes small judgements, your code decides, and an expensive LLM is called only when needed.",
+      "description": "Sixteen interactive simulations of the Jev pattern, six of them multi-agent architectures: a fast, cheap System One model makes small judgements, your code decides, and an expensive LLM is called only when needed.",
       "isPartOf": {
         "@id": "https://exponen-agi.github.io/jev-playground/#website"
       },
@@ -49,7 +49,7 @@
       "primaryImageOfPage": "https://exponen-agi.github.io/jev-playground/assets/og-index.png",
       "mainEntity": {
         "@type": "ItemList",
-        "numberOfItems": 10,
+        "numberOfItems": 16,
         "itemListElement": [
           {
             "@type": "ListItem",
@@ -120,6 +120,48 @@
             "url": "https://exponen-agi.github.io/jev-playground/06-model-router.html",
             "name": "Picking the right brain",
             "description": "You pay for several AI models of different speeds and prices. Send each request to the cheapest one that can actually do the job."
+          },
+          {
+            "@type": "ListItem",
+            "position": 11,
+            "url": "https://exponen-agi.github.io/jev-playground/11-sequential-pipeline.html",
+            "name": "Three desks, one claim",
+            "description": "Three AI agents handle an insurance claim in sequence. Jev checks every handoff: pass it on, send it back once, or stop for a person."
+          },
+          {
+            "@type": "ListItem",
+            "position": 12,
+            "url": "https://exponen-agi.github.io/jev-playground/12-parallel-fanout.html",
+            "name": "Four specialists, one verdict",
+            "description": "Jev picks which specialist agents a new supplier needs, they run at the same time, and a second Jev call merges their findings."
+          },
+          {
+            "@type": "ListItem",
+            "position": 13,
+            "url": "https://exponen-agi.github.io/jev-playground/13-orchestrator-workers.html",
+            "name": "The foreman",
+            "description": "Jev as the orchestrator of four LLM workers: who goes next, was the last step any good, and is the team going round in circles."
+          },
+          {
+            "@type": "ListItem",
+            "position": 14,
+            "url": "https://exponen-agi.github.io/jev-playground/14-agent-handoff.html",
+            "name": "Passing the customer on",
+            "description": "On every customer message, stay with the current agent or hand over, with a margin that stops agents passing the customer back and forth."
+          },
+          {
+            "@type": "ListItem",
+            "position": 15,
+            "url": "https://exponen-agi.github.io/jev-playground/15-evaluator-optimizer.html",
+            "name": "Write, judge, rewrite",
+            "description": "A writer agent drafts and Jev scores against a five-part rubric. Done is a line of code, and the loop knows when to stop."
+          },
+          {
+            "@type": "ListItem",
+            "position": 16,
+            "url": "https://exponen-agi.github.io/jev-playground/16-tool-agent-loop.html",
+            "name": "The agent on call",
+            "description": "An incident agent proposes commands. Jev checks each for hazards and watches the loop for repetition and resolution."
           }
         ]
       }
@@ -129,21 +171,6 @@
 </script>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%278%27 fill=%27%23d63c9e%27/%3E%3Cpath d=%27M20 8v11a5 5 0 0 1-9 3%27 stroke=%27white%27 stroke-width=%273%27 fill=%27none%27 stroke-linecap=%27round%27/%3E%3C/svg%3E">
 <link rel="stylesheet" href="assets/sim.css">
-<style>
-  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); gap: 16px; }
-  .card {
-    display: block; text-decoration: none; color: inherit; background: var(--panel);
-    border: 1px solid var(--line); border-radius: var(--r); padding: 20px;
-    box-shadow: var(--shadow); transition: transform .16s, border-color .16s;
-  }
-  .card:hover { transform: translateY(-2px); border-color: var(--jev); }
-  .card:focus-visible { outline: 2px solid var(--jev); outline-offset: 3px; }
-  .card .num { font-family: var(--mono); font-size: 11px; font-weight: 700; color: var(--jev); letter-spacing: .08em; }
-  .card h3 { margin: 6px 0 8px; font-size: 17px; letter-spacing: -.01em; }
-  .card p { margin: 0; font-size: 13.5px; color: var(--muted); line-height: 1.5; }
-  .card .flow { margin-top: 14px; font-size: 11.5px; font-family: var(--mono); color: var(--muted);
-                padding-top: 12px; border-top: 1px solid var(--line-soft); }
-</style>
 </head>
 <body>
 <main class="wrap">
@@ -153,6 +180,9 @@
          aria-label="Read the article: Jev and System One models, a working engineer's guide">
         <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M3 1.5h6.5L13 5v9.5a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1v-12a1 1 0 0 1 1-1Zm6 1.2V5.2h2.5L9 2.7ZM4.5 8h7v1.1h-7V8Zm0 2.4h7v1.1h-7v-1.1ZM4.5 5.6h3v1.1h-3V5.6Z"></path></svg><span class="label">Read the article</span>
       </a>
+      <a class="repo-link" href="#agentic" aria-label="Jump to the agentic systems section">
+        <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M8 1.5a1.75 1.75 0 1 1 0 3.5 1.75 1.75 0 0 1 0-3.5ZM2.75 10.5a1.75 1.75 0 1 1 0 3.5 1.75 1.75 0 0 1 0-3.5Zm10.5 0a1.75 1.75 0 1 1 0 3.5 1.75 1.75 0 0 1 0-3.5ZM7.4 5.6h1.2v2.1l3.9 2.6-.66 1-3.84-2.56-3.84 2.56-.66-1 3.9-2.6V5.6Z"></path></svg><span class="label">Agentic systems</span>
+      </a>
       <a class="repo-link" href="https://github.com/exponen-agi/jev-playground"
          aria-label="View the jev-playground source on GitHub">
         <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.42 7.42 0 0 1 2-.27c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"></path></svg><span class="label">View on GitHub</span>
@@ -160,9 +190,10 @@
     </span>
   </header>
   <h1>See it work</h1>
-  <p class="lede">Ten small simulations of the same idea: a fast, cheap AI makes the small
+  <p class="lede">Sixteen small simulations of the same idea: a fast, cheap AI makes the small
   judgements, your code makes the decisions, and the expensive AI is only called when it is
-  genuinely needed. Every page links to the Python it is built from.</p>
+  genuinely needed. The last six put it between AI agents, in
+  <a href="#agentic">six multi-agent architectures</a>. Every page links to the Python it is built from.</p>
 
   <a class="feature" href="article-jev-system-one.html">
     <span class="icon"><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M3 1.5h6.5L13 5v9.5a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1v-12a1 1 0 0 1 1-1Zm6 1.2V5.2h2.5L9 2.7ZM4.5 8h7v1.1h-7V8Zm0 2.4h7v1.1h-7v-1.1ZM4.5 5.6h3v1.1h-3V5.6Z"></path></svg></span>
@@ -269,6 +300,63 @@
       </a>
     </div>
   </div>
+
+  <!-- ──────────────────────────────────────────────────── agentic systems -->
+  <section class="agentic-section" id="agentic" aria-labelledby="agentic-h">
+    <div class="group-head"><h2 id="agentic-h">Agentic systems</h2><span class="count">6 architectures · 6 simulations</span></div>
+    <h3>Jev between the agents</h3>
+    <p class="blurb">LLM agents do the work. Every decision between them is a small, typed question:
+    pass this on, who goes next, hand this over, is it done, is it looping. Jev answers each in a
+    quarter of a second, and your code holds the thresholds. One use case for each of the common
+    architectures.</p>
+    <a class="feature" href="agentic.html" style="margin:0 0 18px">
+      <span class="icon"><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M8 1.5a1.75 1.75 0 1 1 0 3.5 1.75 1.75 0 0 1 0-3.5ZM2.75 10.5a1.75 1.75 0 1 1 0 3.5 1.75 1.75 0 0 1 0-3.5Zm10.5 0a1.75 1.75 0 1 1 0 3.5 1.75 1.75 0 0 1 0-3.5ZM7.4 5.6h1.2v2.1l3.9 2.6-.66 1-3.84-2.56-3.84 2.56-.66-1 3.9-2.6V5.6Z"></path></svg></span>
+      <span>
+        <span class="kicker">Start here · the overview</span>
+        <span class="title">Agentic systems: where Jev sits in all six architectures</span>
+        <span class="sub">One diagram per architecture, what decides each step today, and where to be careful.</span>
+      </span>
+      <span class="go" aria-hidden="true">Open →</span>
+    </a>
+    <div class="cards">
+      <a class="card" href="11-sequential-pipeline.html">
+        <div class="num">11 · SEQUENTIAL</div><h3>Three desks, one claim</h3>
+        <p>Three AI agents handle an insurance claim in sequence. A made-up detail at the first desk
+        ends up in the letter, unless something checks every handoff.</p>
+        <div class="flow">agent → Jev → agent → Jev → agent → Jev</div>
+      </a>
+      <a class="card" href="12-parallel-fanout.html">
+        <div class="num">12 · PARALLEL</div><h3>Four specialists, one verdict</h3>
+        <p>Security, privacy, legal, finance. Run only the specialists this supplier needs, all at
+        once, then turn what they wrote into one decision.</p>
+        <div class="flow">Jev plan → specialists in parallel → Jev merge</div>
+      </a>
+      <a class="card" href="13-orchestrator-workers.html">
+        <div class="num">13 · ORCHESTRATOR–WORKERS</div><h3>The foreman</h3>
+        <p>Four AI workers fix bugs together. Jev picks who goes next, checks the last output, and
+        notices when the team is going round in circles.</p>
+        <div class="flow">Jev ⇄ researcher · coder · tester · reviewer</div>
+      </a>
+      <a class="card" href="14-agent-handoff.html">
+        <div class="num">14 · ROUTER / HANDOFF</div><h3>Passing the customer on</h3>
+        <p>A travel assistant made of specialists. Hand over too easily and the customer gets passed
+        back and forth. Hand over too reluctantly and nobody can issue the refund.</p>
+        <div class="flow">turn → Jev → stay · hand off · person</div>
+      </a>
+      <a class="card" href="15-evaluator-optimizer.html">
+        <div class="num">15 · EVALUATOR–OPTIMIZER</div><h3>Write, judge, rewrite</h3>
+        <p>A writer agent drafts, and Jev scores the draft on a five-part rubric. "Done" is a line of
+        code, and the loop knows when another round will not help.</p>
+        <div class="flow">writer → Jev rubric → publish · rewrite · person</div>
+      </a>
+      <a class="card" href="16-tool-agent-loop.html">
+        <div class="num">16 · TOOL-CALLING AGENT</div><h3>The agent on call</h3>
+        <p>An incident agent runs commands. Check each one for hazards, and also ask whether it is
+        repeating itself and whether the incident has already cleared.</p>
+        <div class="flow">agent → Jev → run · confirm · block · nudge · stop</div>
+      </a>
+    </div>
+  </section>
 
   <div class="panel">
     <h2>The shape they all share</h2>

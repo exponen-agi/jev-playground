@@ -1,8 +1,9 @@
 # Cookbooks
 
-Ten real-life patterns for using Jev *with* the models you already run — not instead of them.
-The first six sit around a frontier model. The last four are the sorting work a small
-business is currently doing by hand, every day.
+Sixteen real-life patterns for using Jev *with* the models you already run — not instead of them.
+The first six sit around a frontier model. The next four are the sorting work a small
+business is currently doing by hand, every day. The last six put Jev *between* LLM agents, one
+for each common multi-agent architecture.
 
 Every script is runnable as-is against its built-in sample inputs, and marks the boundary
 between the Jev part and the frontier-model part. The Jev half runs with only
@@ -20,7 +21,7 @@ python 01_triage_cascade.py
 
 ---
 
-## The ten
+## The sixteen
 
 ### Around the models you already run
 
@@ -52,6 +53,29 @@ Three things worth stealing from this second group:
 - **10** ships `calibration_report()` — run last year's hand-categorised ledger through and bucket
   the results by reported confidence. Accuracy climbing with confidence is what makes a floor
   mean anything. A flat table means it does not, and you should automate none of it.
+
+### Agentic systems: Jev between the agents
+
+The LLM agents do the work; every decision *between* them is one Jev call; the thresholds
+live in code. Workers use whichever provider key is set (see [`_shared/agents.py`](./_shared/agents.py))
+and fall back to scripted sample output, so the Jev half runs with only `TYPESAFE_API_KEY`.
+Overview: [`../simulations/agentic.html`](../simulations/agentic.html).
+
+| # | Architecture | Jev's job | The LLM agents' job | Needs |
+|---|---|---|---|---|
+| **[11](./11_sequential_pipeline.py)** · [▶](../simulations/11-sequential-pipeline.html) | **Sequential pipeline** | Gate every handoff: grounded in this stage's input, complete for the next stage, plus stage-specific checks | Intake summary, coverage decision, customer letter | `ANTHROPIC`, `OPENAI` or `GOOGLE` (optional) |
+| **[12](./12_parallel_due_diligence.py)** · [▶](../simulations/12-parallel-fanout.html) | **Parallel fan-out** | Plan which specialists run; merge their findings by severity and evidence | Security, privacy, legal, finance reviews, concurrently | any (optional) |
+| **[13](./13_orchestrator_workers.py)** · [▶](../simulations/13-orchestrator-workers.html) | **Orchestrator–workers** | The supervisor: `next_agent`, `last_output_ok`, `stuck`, `needs_external_action` | Research, code, test, review | any (optional) |
+| **[14](./14_agent_handoff.py)** · [▶](../simulations/14-agent-handoff.html) | **Agent handoff** | Topic probabilities per turn; hand off only on a clear win | Concierge, flights, hotels, refunds | any (optional) |
+| **[15](./15_evaluator_optimizer.py)** · [▶](../simulations/15-evaluator-optimizer.html) | **Evaluator–optimizer** | A five-question rubric; "done" is every check past its bar | Write and rewrite the listing | any (optional) |
+| **[16](./16_tool_agent_loop.py)** · [▶](../simulations/16-tool-agent-loop.html) | **Tool-calling agent** | Hazards of each call, plus `repeats` and `resolved` about the loop | Propose calls; write the incident note | any (optional) |
+
+Two things worth stealing from this group:
+
+- **13** shows the supervisor reading a *compact* state — task, acceptance criteria, last three
+  steps, step count — never the transcript. That keeps every decision as fast as the first one.
+- **14** turns a calibrated probability into hysteresis: hand off only when the challenger beats
+  the current owner by a margin. A model that names a topic without a number cannot express that.
 
 ---
 
