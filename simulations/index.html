@@ -212,19 +212,19 @@
     or what — should deal with each one.</p>
     <div class="cards">
       <a class="card" href="01-triage-cascade.html">
-        <div class="num">01</div><h3>Support triage cascade</h3>
+        <div class="card-top"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3 4h18l-7 8.5V18l-4 2v-7.5L3 4Z"/></svg></span><span class="num">01</span></div><h3>Support triage cascade</h3>
         <p>A thousand customer messages arrive. Most of them never need an expensive AI model —
         but something has to work out which ones do.</p>
         <div class="flow">message → Jev → code · specialist AI · person</div>
       </a>
       <a class="card" href="07-inbox-triage.html">
-        <div class="num">07</div><h3>The shared inbox</h3>
+        <div class="card-top"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3 13.5 6 5h12l3 8.5V19H3v-5.5Z"/><path d="M3 13.5h5l1.5 2.5h5l1.5-2.5h5"/></svg></span><span class="num">07</span></div><h3>The shared inbox</h3>
         <p>One mailbox, three people half-watching it, and a purchase enquiry buried under four
         recruiters. Sorted before anyone opens it.</p>
         <div class="flow">email → Jev → sales · accounts · ops · the owner</div>
       </a>
       <a class="card" href="04-output-verifier.html">
-        <div class="num">04</div><h3>The second pair of eyes</h3>
+        <div class="card-top"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg></span><span class="num">04</span></div><h3>The second pair of eyes</h3>
         <p>A chatbot wrote a reply to a customer. Did it invent a number? Promise something?
         Actually answer? Check before it sends.</p>
         <div class="flow">draft → Jev → send · rewrite · hold</div>
@@ -239,13 +239,13 @@
     and an order that arrived as six unpunctuated words.</p>
     <div class="cards">
       <a class="card" href="05-lead-scoring.html">
-        <div class="num">05</div><h3>Scoring while they wait</h3>
+        <div class="card-top"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M2.5 17.5a9.5 9.5 0 0 1 19 0"/><path d="M5.3 10.8l1.4 1M12 8v1.7M18.7 10.8l-1.4 1"/><path d="M12 17.5l4-5"/><circle cx="12" cy="17.5" r="1.3"/></svg></span><span class="num">05</span></div><h3>Scoring while they wait</h3>
         <p>Someone submits a form. Rate them on four things and route them before the page
         finishes loading. Drag the sliders to change what matters.</p>
         <div class="flow">form → Jev → weighted score → sales tier</div>
       </a>
       <a class="card" href="08-order-intake.html">
-        <div class="num">08</div><h3>Orders by WhatsApp</h3>
+        <div class="card-top"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 5h16v11H10l-5 4v-4H4V5Z"/><path d="M8 9.5h8M8 12.5h5"/></svg></span><span class="num">08</span></div><h3>Orders by WhatsApp</h3>
         <p>For a lot of businesses the ordering system <i>is</i> a phone number. Jev judges what the
         message is; a regex reads the number. Neither does the other’s job.</p>
         <div class="flow">message → Jev + parser → order · question · person</div>
@@ -260,13 +260,13 @@
     wrong. This is where a calibrated confidence number earns its keep.</p>
     <div class="cards">
       <a class="card" href="09-invoice-intake.html">
-        <div class="num">09</div><h3>The bill that just arrived</h3>
+        <div class="card-top"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M6 3h12v18l-2.4-1.6L13.2 21 12 20.2 10.8 21l-2.4-1.6L6 21V3Z"/><path d="M9 8h6M9 11.5h6M9 15h3.5"/></svg></span><span class="num">09</span></div><h3>The bill that just arrived</h3>
         <p>Invoice or statement? Paid already? Does it match something we actually ordered? Your open
         orders go into the same call as the document.</p>
         <div class="flow">attachment → Jev → filed · approval · chase · held</div>
       </a>
       <a class="card" href="10-bookkeeping.html">
-        <div class="num">10</div><h3>A month of transactions</h3>
+        <div class="card-top"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3 9.5 12 4l9 5.5"/><path d="M5 10.5v7M9.7 10.5v7M14.3 10.5v7M19 10.5v7"/><path d="M3 20h18"/></svg></span><span class="num">10</span></div><h3>A month of transactions</h3>
         <p>Eight hundred bank lines, and the only number that matters is whether the model knows
         which ones it is unsure about. Watch the accuracy move with the floor.</p>
         <div class="flow">statement → Jev → filed · review queue</div>
@@ -281,19 +281,19 @@
     what they read, checking what they do, and deciding which one gets the job.</p>
     <div class="cards">
       <a class="card" href="02-rag-gatekeeper.html">
-        <div class="num">02</div><h3>The gatekeeper</h3>
+        <div class="card-top"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3 20 6v6c0 4.6-3.4 8-8 9-4.6-1-8-4.4-8-9V6l8-3Z"/><path d="m8.5 12 2.5 2.5 4.5-5"/></svg></span><span class="num">02</span></div><h3>The gatekeeper</h3>
         <p>Search returned ten documents. One is irrelevant, one is trying to hijack the answer.
         Screen them before the expensive model reads a word.</p>
         <div class="flow">documents → Jev → keep · drop · quarantine</div>
       </a>
       <a class="card" href="03-agent-guardrails.html">
-        <div class="num">03</div><h3>The checkpoint</h3>
+        <div class="card-top"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="4.5" width="18" height="15" rx="2.5"/><path d="m7 9.5 3 2.5-3 2.5M12.5 15H17"/></svg></span><span class="num">03</span></div><h3>The checkpoint</h3>
         <p>An AI agent keeps asking to run commands. Check every one for four separate hazards,
         in less time than the command itself takes.</p>
         <div class="flow">tool call → Jev → allow · confirm · block</div>
       </a>
       <a class="card" href="06-model-router.html">
-        <div class="num">06</div><h3>Picking the right brain</h3>
+        <div class="card-top"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3 12h5"/><path d="M8 12c4 0 4.5-6 10.5-6M8 12c4 0 4.5 6 10.5 6"/><path d="m16 3.8 2.8 2.2L16 8.2M16 15.8l2.8 2.2-2.8 2.2"/></svg></span><span class="num">06</span></div><h3>Picking the right brain</h3>
         <p>You pay for several AI models of different speeds and prices. Send each request to
         the cheapest one that can actually do the job.</p>
         <div class="flow">request → Jev → no AI · small · reasoning · person</div>
@@ -318,42 +318,55 @@
       </span>
       <span class="go" aria-hidden="true">Open →</span>
     </a>
+    <p class="blurb" style="margin:0 0 14px;font-size:13px">In each small diagram the pink diamonds are Jev, blue boxes are LLM agents, green is code or done, and orange is a person.</p>
     <div class="cards">
       <a class="card" href="11-sequential-pipeline.html">
-        <div class="num">11 · SEQUENTIAL</div><h3>Three desks, one claim</h3>
-        <p>Three AI agents handle an insurance claim in sequence. A made-up detail at the first desk
-        ends up in the letter, unless something checks every handoff.</p>
+        <div class="num">11 · <span class="arch">Sequential</span></div>
+        <svg class="mini" role="img" aria-label="Sequential diagram" data-n="11"></svg>
+        <h3>Three desks, one claim</h3>
+        <p>Intake, assessor and letter agents in a line. A gate at every handoff passes the work on, sends it back once with a reason, or stops for a person.</p>
         <div class="flow">agent → Jev → agent → Jev → agent → Jev</div>
+        <div class="links"><span>Open the simulation →</span><span style="color:var(--muted);font-weight:400" class="mono">11_sequential_pipeline.py</span></div>
       </a>
       <a class="card" href="12-parallel-fanout.html">
-        <div class="num">12 · PARALLEL</div><h3>Four specialists, one verdict</h3>
-        <p>Security, privacy, legal, finance. Run only the specialists this supplier needs, all at
-        once, then turn what they wrote into one decision.</p>
+        <div class="num">12 · <span class="arch">Parallel</span></div>
+        <svg class="mini" role="img" aria-label="Parallel diagram" data-n="12"></svg>
+        <h3>Four specialists, one verdict</h3>
+        <p>Jev picks which of four specialist agents this supplier needs. They run at the same time, and a second call merges their findings into one decision.</p>
         <div class="flow">Jev plan → specialists in parallel → Jev merge</div>
+        <div class="links"><span>Open the simulation →</span><span style="color:var(--muted);font-weight:400" class="mono">12_parallel_due_diligence.py</span></div>
       </a>
       <a class="card" href="13-orchestrator-workers.html">
-        <div class="num">13 · ORCHESTRATOR–WORKERS</div><h3>The foreman</h3>
-        <p>Four AI workers fix bugs together. Jev picks who goes next, checks the last output, and
-        notices when the team is going round in circles.</p>
+        <div class="num">13 · <span class="arch">Orchestrator–workers</span></div>
+        <svg class="mini" role="img" aria-label="Orchestrator–workers diagram" data-n="13"></svg>
+        <h3>The foreman</h3>
+        <p>Jev is the supervisor. Every step it picks the next worker, checks the last output, and notices when the team is going round in circles.</p>
         <div class="flow">Jev ⇄ researcher · coder · tester · reviewer</div>
+        <div class="links"><span>Open the simulation →</span><span style="color:var(--muted);font-weight:400" class="mono">13_orchestrator_workers.py</span></div>
       </a>
       <a class="card" href="14-agent-handoff.html">
-        <div class="num">14 · ROUTER / HANDOFF</div><h3>Passing the customer on</h3>
-        <p>A travel assistant made of specialists. Hand over too easily and the customer gets passed
-        back and forth. Hand over too reluctantly and nobody can issue the refund.</p>
+        <div class="num">14 · <span class="arch">Router / handoff</span></div>
+        <svg class="mini" role="img" aria-label="Router / handoff diagram" data-n="14"></svg>
+        <h3>Passing the customer on</h3>
+        <p>On every customer message, stay with the current agent or hand over. A margin in code stops agents passing the customer back and forth.</p>
         <div class="flow">turn → Jev → stay · hand off · person</div>
+        <div class="links"><span>Open the simulation →</span><span style="color:var(--muted);font-weight:400" class="mono">14_agent_handoff.py</span></div>
       </a>
       <a class="card" href="15-evaluator-optimizer.html">
-        <div class="num">15 · EVALUATOR–OPTIMIZER</div><h3>Write, judge, rewrite</h3>
-        <p>A writer agent drafts, and Jev scores the draft on a five-part rubric. "Done" is a line of
-        code, and the loop knows when another round will not help.</p>
+        <div class="num">15 · <span class="arch">Evaluator–optimizer</span></div>
+        <svg class="mini" role="img" aria-label="Evaluator–optimizer diagram" data-n="15"></svg>
+        <h3>Write, judge, rewrite</h3>
+        <p>A writer agent drafts and Jev scores the draft on a five-part rubric. "Done" is a line of code, feedback names the failing checks, and the loop knows when to stop.</p>
         <div class="flow">writer → Jev rubric → publish · rewrite · person</div>
+        <div class="links"><span>Open the simulation →</span><span style="color:var(--muted);font-weight:400" class="mono">15_evaluator_optimizer.py</span></div>
       </a>
       <a class="card" href="16-tool-agent-loop.html">
-        <div class="num">16 · TOOL-CALLING AGENT</div><h3>The agent on call</h3>
-        <p>An incident agent runs commands. Check each one for hazards, and also ask whether it is
-        repeating itself and whether the incident has already cleared.</p>
+        <div class="num">16 · <span class="arch">Tool-calling agent</span></div>
+        <svg class="mini" role="img" aria-label="Tool-calling agent diagram" data-n="16"></svg>
+        <h3>The agent on call</h3>
+        <p>An incident agent proposes commands. Jev checks each one for hazards, and also asks whether the agent is repeating itself and whether the incident has already cleared.</p>
         <div class="flow">agent → Jev → run · confirm · block · nudge · stop</div>
+        <div class="links"><span>Open the simulation →</span><span style="color:var(--muted);font-weight:400" class="mono">16_tool_agent_loop.py</span></div>
       </a>
     </div>
   </section>
@@ -370,5 +383,10 @@
     not measured.</p>
   </div>
 </main>
+<script src="assets/d3-mini.js"></script>
+<script type="module">
+import { drawMiniDiagrams } from "./assets/mini-diagrams.js";
+drawMiniDiagrams();
+</script>
 </body>
 </html>
