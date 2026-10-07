@@ -318,42 +318,55 @@
       </span>
       <span class="go" aria-hidden="true">Open →</span>
     </a>
+    <p class="blurb" style="margin:0 0 14px;font-size:13px">In each small diagram the pink diamonds are Jev, blue boxes are LLM agents, green is code or done, and orange is a person.</p>
     <div class="cards">
       <a class="card" href="11-sequential-pipeline.html">
-        <div class="num">11 · SEQUENTIAL</div><h3>Three desks, one claim</h3>
-        <p>Three AI agents handle an insurance claim in sequence. A made-up detail at the first desk
-        ends up in the letter, unless something checks every handoff.</p>
+        <div class="num">11 · <span class="arch">Sequential</span></div>
+        <svg class="mini" role="img" aria-label="Sequential diagram" data-n="11"></svg>
+        <h3>Three desks, one claim</h3>
+        <p>Intake, assessor and letter agents in a line. A gate at every handoff passes the work on, sends it back once with a reason, or stops for a person.</p>
         <div class="flow">agent → Jev → agent → Jev → agent → Jev</div>
+        <div class="links"><span>Open the simulation →</span><span style="color:var(--muted);font-weight:400" class="mono">11_sequential_pipeline.py</span></div>
       </a>
       <a class="card" href="12-parallel-fanout.html">
-        <div class="num">12 · PARALLEL</div><h3>Four specialists, one verdict</h3>
-        <p>Security, privacy, legal, finance. Run only the specialists this supplier needs, all at
-        once, then turn what they wrote into one decision.</p>
+        <div class="num">12 · <span class="arch">Parallel</span></div>
+        <svg class="mini" role="img" aria-label="Parallel diagram" data-n="12"></svg>
+        <h3>Four specialists, one verdict</h3>
+        <p>Jev picks which of four specialist agents this supplier needs. They run at the same time, and a second call merges their findings into one decision.</p>
         <div class="flow">Jev plan → specialists in parallel → Jev merge</div>
+        <div class="links"><span>Open the simulation →</span><span style="color:var(--muted);font-weight:400" class="mono">12_parallel_due_diligence.py</span></div>
       </a>
       <a class="card" href="13-orchestrator-workers.html">
-        <div class="num">13 · ORCHESTRATOR–WORKERS</div><h3>The foreman</h3>
-        <p>Four AI workers fix bugs together. Jev picks who goes next, checks the last output, and
-        notices when the team is going round in circles.</p>
+        <div class="num">13 · <span class="arch">Orchestrator–workers</span></div>
+        <svg class="mini" role="img" aria-label="Orchestrator–workers diagram" data-n="13"></svg>
+        <h3>The foreman</h3>
+        <p>Jev is the supervisor. Every step it picks the next worker, checks the last output, and notices when the team is going round in circles.</p>
         <div class="flow">Jev ⇄ researcher · coder · tester · reviewer</div>
+        <div class="links"><span>Open the simulation →</span><span style="color:var(--muted);font-weight:400" class="mono">13_orchestrator_workers.py</span></div>
       </a>
       <a class="card" href="14-agent-handoff.html">
-        <div class="num">14 · ROUTER / HANDOFF</div><h3>Passing the customer on</h3>
-        <p>A travel assistant made of specialists. Hand over too easily and the customer gets passed
-        back and forth. Hand over too reluctantly and nobody can issue the refund.</p>
+        <div class="num">14 · <span class="arch">Router / handoff</span></div>
+        <svg class="mini" role="img" aria-label="Router / handoff diagram" data-n="14"></svg>
+        <h3>Passing the customer on</h3>
+        <p>On every customer message, stay with the current agent or hand over. A margin in code stops agents passing the customer back and forth.</p>
         <div class="flow">turn → Jev → stay · hand off · person</div>
+        <div class="links"><span>Open the simulation →</span><span style="color:var(--muted);font-weight:400" class="mono">14_agent_handoff.py</span></div>
       </a>
       <a class="card" href="15-evaluator-optimizer.html">
-        <div class="num">15 · EVALUATOR–OPTIMIZER</div><h3>Write, judge, rewrite</h3>
-        <p>A writer agent drafts, and Jev scores the draft on a five-part rubric. "Done" is a line of
-        code, and the loop knows when another round will not help.</p>
+        <div class="num">15 · <span class="arch">Evaluator–optimizer</span></div>
+        <svg class="mini" role="img" aria-label="Evaluator–optimizer diagram" data-n="15"></svg>
+        <h3>Write, judge, rewrite</h3>
+        <p>A writer agent drafts and Jev scores the draft on a five-part rubric. "Done" is a line of code, feedback names the failing checks, and the loop knows when to stop.</p>
         <div class="flow">writer → Jev rubric → publish · rewrite · person</div>
+        <div class="links"><span>Open the simulation →</span><span style="color:var(--muted);font-weight:400" class="mono">15_evaluator_optimizer.py</span></div>
       </a>
       <a class="card" href="16-tool-agent-loop.html">
-        <div class="num">16 · TOOL-CALLING AGENT</div><h3>The agent on call</h3>
-        <p>An incident agent runs commands. Check each one for hazards, and also ask whether it is
-        repeating itself and whether the incident has already cleared.</p>
+        <div class="num">16 · <span class="arch">Tool-calling agent</span></div>
+        <svg class="mini" role="img" aria-label="Tool-calling agent diagram" data-n="16"></svg>
+        <h3>The agent on call</h3>
+        <p>An incident agent proposes commands. Jev checks each one for hazards, and also asks whether the agent is repeating itself and whether the incident has already cleared.</p>
         <div class="flow">agent → Jev → run · confirm · block · nudge · stop</div>
+        <div class="links"><span>Open the simulation →</span><span style="color:var(--muted);font-weight:400" class="mono">16_tool_agent_loop.py</span></div>
       </a>
     </div>
   </section>
@@ -370,5 +383,10 @@
     not measured.</p>
   </div>
 </main>
+<script src="assets/d3-mini.js"></script>
+<script type="module">
+import { drawMiniDiagrams } from "./assets/mini-diagrams.js";
+drawMiniDiagrams();
+</script>
 </body>
 </html>
