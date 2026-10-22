@@ -767,6 +767,15 @@ claude plugin install typesafe@typesafe-ai
 npx skills add typesafe-ai/skills --skill typesafe-ai
 ```
 
+### Not sure which primitive your problem needs?
+
+[**AutoJEV**](https://github.com/exponen-agi/autojev) is a Claude Code plugin built on the
+patterns in this repo. Describe a decision in plain words (`/autojev should we auto-approve
+this expense claim?`) and it reads your project, works out whether the problem is a yes/no
+gate, a multiple choice, a score or a cascade, shows you the alternatives it weighed, and
+builds a tested Jev decision engine. No API key is needed to build or test it. It keeps the
+engine recalibrated as your project changes, until you run `/autojev-stop`.
+
 ---
 
 ## How to pilot this without betting anything
@@ -814,3 +823,5 @@ three seconds too many.
 This is an independent, unofficial playground. Not affiliated with TypeSafe AI. All figures
 are as published by TypeSafe in September 2026 and are vendor-reported unless stated
 otherwise — verify on your own traffic before you rely on them.
+
+Code and docs in this repository are released under the [MIT License](LICENSE).
