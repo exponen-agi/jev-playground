@@ -823,3 +823,5 @@ three seconds too many.
 This is an independent, unofficial playground. Not affiliated with TypeSafe AI. All figures
 are as published by TypeSafe in September 2026 and are vendor-reported unless stated
 otherwise — verify on your own traffic before you rely on them.
+
+Code and docs in this repository are released under the [MIT License](LICENSE).
