@@ -2,6 +2,11 @@
 
 The Jev half of every cookbook runs with only TYPESAFE_API_KEY set. The frontier-model
 half degrades to a printed placeholder and says so.
+
+The "Jev half" can also be answered by an LLM instead of Jev: set AUTOJEV_BACKEND to
+openai, anthropic or gemini (plus AUTOJEV_LLM_MODEL and that provider's key) and `jev()`
+returns a system-one-adapter client with the same `system_one(state=, questions=)` call
+and the same answer types. The cookbooks do not change. See .env.example.
 """
 
 from __future__ import annotations
@@ -30,6 +35,24 @@ def have(env_var: str) -> bool:
 
 _JEV = None
 
+# backend -> environment variables that may hold its key. "jev" is the default.
+_BACKEND_KEYS = {
+    "jev": ("TYPESAFE_API_KEY",),
+    "openai": ("OPENAI_API_KEY",),
+    "anthropic": ("ANTHROPIC_API_KEY",),
+    "gemini": ("GEMINI_API_KEY", "GOOGLE_API_KEY"),
+}
+
+
+def backend() -> str:
+    """Which system_one backend answers: jev (default), openai, anthropic or gemini."""
+    name = os.environ.get("AUTOJEV_BACKEND", "").strip().lower() or "jev"
+    if name not in _BACKEND_KEYS:
+        raise MissingKey(
+            f"AUTOJEV_BACKEND={name!r} is not a backend; choose one of {', '.join(_BACKEND_KEYS)}."
+        )
+    return name
+
 
 def jev():
     """A shared, version-pinned TypeSafe client.
@@ -38,16 +61,45 @@ def jev():
     answers behind it can change without a change on your side. Once you have tuned
     confidence thresholds against a version, pin the versioned ID and move on your own
     schedule. The response's `model` field reports which version actually answered.
+
+    With AUTOJEV_BACKEND=openai|anthropic|gemini this is a system-one-adapter client
+    instead: an LLM answers the same questions. Its probabilities are not Jev's, so
+    thresholds tuned for one are not tuned for the other.
     """
     global _JEV
     if _JEV is None:
-        from typesafe_sdk import TypeSafeClient
-
-        if not have("TYPESAFE_API_KEY"):
+        name = backend()
+        if not any(have(var) for var in _BACKEND_KEYS[name]):
             raise MissingKey(
-                "TYPESAFE_API_KEY is not set. Copy .env.example to .env and add your key."
+                f"{' or '.join(_BACKEND_KEYS[name])} is not set. "
+                "Copy .env.example to .env and add your key."
             )
-        _JEV = TypeSafeClient(model=os.environ.get("TYPESAFE_MODEL", "jev-1.13.0"))
+        if name == "jev":
+            from typesafe_sdk import TypeSafeClient
+
+            _JEV = TypeSafeClient(model=os.environ.get("TYPESAFE_MODEL", "jev-1.13.0"))
+        else:
+            model = os.environ.get("AUTOJEV_LLM_MODEL", "").strip()
+            if not model:
+                raise MissingKey(
+                    f"AUTOJEV_LLM_MODEL is not set. Name the {name} model to use; "
+                    "there is no default because model names move."
+                )
+            try:
+                from system_one_adapter import RetryPolicy, SystemOneAdapterClient
+            except ImportError as exc:
+                raise MissingKey(
+                    f"pip install 'system-one-adapter[{name}]' to use the {name} backend."
+                ) from exc
+            _JEV = SystemOneAdapterClient(
+                structured_outputs=True,
+                llm_answer_mode="probabilities",
+                normalize_probabilities=True,
+                n_retry_malformed_structure=2,
+                retry=RetryPolicy(max_retries=2),
+                provider=name,
+                model=model,
+            )
     return _JEV
 
 
