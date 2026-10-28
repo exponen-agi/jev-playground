@@ -749,9 +749,20 @@ python cookbooks/01_triage_cascade.py
 | Variable | Needed for |
 |---|---|
 | `TYPESAFE_API_KEY` | everything |
+| `AUTOJEV_BACKEND`, `AUTOJEV_LLM_MODEL` | optional: answer with an LLM instead of Jev |
 | `OPENAI_API_KEY` | cookbooks 01, 03, 04, 06 |
 | `ANTHROPIC_API_KEY` | cookbooks 02, 03, 04, 06 |
 | `GOOGLE_API_KEY` | cookbook 06 |
+
+### Answering with an LLM instead of Jev
+
+The cookbooks get their client from one place, `cookbooks/_shared/clients.py`. Set
+`AUTOJEV_BACKEND` to `openai`, `anthropic` or `gemini` (plus `AUTOJEV_LLM_MODEL`, an exact model
+name, and that provider's key) and the same `system_one(state=, questions=)` calls are answered by
+an LLM through [`system-one-adapter`](https://github.com/typesafe-ai/system-one-adapter-python)
+(`pip install 'system-one-adapter[openai]'`). Leave it unset and nothing changes: Jev answers.
+The LLM's probabilities are not Jev's, so confidence thresholds tuned for one do not transfer.
+This is the same switch [AutoJEV](https://github.com/exponen-agi/autojev) uses.
 
 ### Letting your coding agent write the integration
 
